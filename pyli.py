@@ -5,6 +5,38 @@ import symbol
 import sys
 from pprint import pprint
 
+################################################################################
+# constants
+
+rtok_name = dict((v,k) for k,v in token.tok_name.iteritems())
+rsym_name = dict((v,k) for k,v in symbol.sym_name.iteritems())
+
+PYTHON_KEYWORDS = ['and','from','not','while','as','elif','global','print',
+                   'or','with','assert','else','if','pass','yield','in','try',
+                   'break','del','except','import','class','exec','raise',
+                   'continue','finally','is','return','def','for','lambda']
+PYTHON_BUILTINS = [
+    'abs','divmod','input','open','staticmethod',
+    'all','enumerate','int','ord','str',
+    'any','eval','isinstance','pow','sum',
+    'basestring','execfile','issubclass','print','super',
+    'bin','file','iter','property','tuple',
+    'bool','filter','len','range','type',
+    'bytearray','float','list','raw_input','unichr',
+    'callable','format','locals','reduce','unicode',
+    'chr','frozenset','long','reload','vars',
+    'classmethod','getattr','map','repr','xrange',
+    'cmp','globals','max','reversed','zip',
+    'compile','hasattr','memoryview','round','__import__',
+    'complex','hash','min','set','apply',
+    'delattr','help','next','setattr','buffer',
+    'dict','hex','object','slice','coerce',
+    'dir','id','oct','sorted','intern',
+    ]
+
+################################################################################
+# parse tree utilities
+
 def convert_readable(tree):
     def int2sym(i):
         if isinstance(i, int):
@@ -18,9 +50,6 @@ def convert_readable(tree):
             else:
                 return convert_readable(i)
     return tuple(int2sym(i) for i in tree)
-
-rtok_name = dict((v,k) for k,v in token.tok_name.iteritems())
-rsym_name = dict((v,k) for k,v in symbol.sym_name.iteritems())
 
 def convert_numeric(tree):
     def sym2int(s):
@@ -77,6 +106,9 @@ def find_tokens(tree):
     bound = tuple(x for f in bound for x in f)
     return tuple(free), tuple(bound)
 
+################################################################################
+# transformation utilities
+
 def import_packages(tree, packages):
     if tree[0] != 'file_input':
         raise ValueError('This function must be given a full parse tree')
@@ -94,28 +126,12 @@ def import_packages(tree, packages):
     ntree = tuple(['file_input'] + list(imports) + list(tree[1:]))
     return ntree
 
-PYTHON_KEYWORDS = ['and','from','not','while','as','elif','global','print',
-                   'or','with','assert','else','if','pass','yield','in','try',
-                   'break','del','except','import','class','exec','raise',
-                   'continue','finally','is','return','def','for','lambda']
-PYTHON_BUILTINS = [
-    'abs','divmod','input','open','staticmethod',
-    'all','enumerate','int','ord','str',
-    'any','eval','isinstance','pow','sum',
-    'basestring','execfile','issubclass','print','super',
-    'bin','file','iter','property','tuple',
-    'bool','filter','len','range','type',
-    'bytearray','float','list','raw_input','unichr',
-    'callable','format','locals','reduce','unicode',
-    'chr','frozenset','long','reload','vars',
-    'classmethod','getattr','map','repr','xrange',
-    'cmp','globals','max','reversed','zip',
-    'compile','hasattr','memoryview','round','__import__',
-    'complex','hash','min','set','apply',
-    'delattr','help','next','setattr','buffer',
-    'dict','hex','object','slice','coerce',
-    'dir','id','oct','sorted','intern',
-    ]
+def print_last_statement(tree):
+    # check if it's statement or expression
+    pass
+
+################################################################################
+# main
 
 if __name__ == '__main__':
     # get a readable parse tree
