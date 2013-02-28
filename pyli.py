@@ -22,6 +22,12 @@ def find_tokens(tree):
         return (tree[1],), tuple()
     if tree[0] == 'import_name':
         return tuple(), find_tokens(tree[2])[0]
+    if tree[0] == 'dotted_as_name' and len(tree) > 2:
+        # used only in imports
+        return (tree[3][1],), tuple()
+    if tree[0] == 'dotted_name':
+        # used in decorators, only tree root as free
+        return (tree[1][1],), tuple()
     if tree[0] == 'expr_stmt' and any(t[0] == 'EQUAL' for t in tree[1:]):
         i = (i for i,t in enumerate(tree[1:]) if t[0] == 'EQUAL').next()
         return (tuple(token for t in tree[i+1:] for token in find_tokens(t)[0]),
