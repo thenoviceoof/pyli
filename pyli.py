@@ -105,7 +105,7 @@ PYTHON_BUILTINS = [
     'basestring','execfile','issubclass','print','super',
     'bin','file','iter','property','tuple',
     'bool','filter','len','range','type',
-    'bytearray','float','list','raw'_'input','unichr',
+    'bytearray','float','list','raw_input','unichr',
     'callable','format','locals','reduce','unicode',
     'chr','frozenset','long','reload','vars',
     'classmethod','getattr','map','repr','xrange',
@@ -131,6 +131,20 @@ if __name__ == '__main__':
     free = list(set(free).difference(PYTHON_KEYWORDS))
     # don't treat builtins as free either
     free = list(set(free).difference(PYTHON_BUILTINS))
+
+    if set(free).intersection(['l', 'li', 'lines']):
+        pass
+    elif set(free).intersection(['ls', 'lis', 'lines']):
+        pass
+    elif set(free).intersection(['input']):
+        pass
+    elif 'stdin' in free:
+        pass
+    else:
+        # treat as a single input-less execution:
+        # get the result of the last expression/statement, and print it
+        pass
+        # if it's a statement, get the left hand side and print that
 
     # add imports for remaining free variables
     read_tree = import_packages(read_tree, free)
