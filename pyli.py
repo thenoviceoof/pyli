@@ -94,15 +94,48 @@ def import_packages(tree, packages):
     ntree = tuple(['file_input'] + list(imports) + list(tree[1:]))
     return ntree
 
+PYTHON_KEYWORDS = ['and','from','not','while','as','elif','global','print',
+                   'or','with','assert','else','if','pass','yield','in','try',
+                   'break','del','except','import','class','exec','raise',
+                   'continue','finally','is','return','def','for','lambda']
+PYTHON_BUILTINS = [
+    'abs','divmod','input','open','staticmethod',
+    'all','enumerate','int','ord','str',
+    'any','eval','isinstance','pow','sum',
+    'basestring','execfile','issubclass','print','super',
+    'bin','file','iter','property','tuple',
+    'bool','filter','len','range','type',
+    'bytearray','float','list','raw'_'input','unichr',
+    'callable','format','locals','reduce','unicode',
+    'chr','frozenset','long','reload','vars',
+    'classmethod','getattr','map','repr','xrange',
+    'cmp','globals','max','reversed','zip',
+    'compile','hasattr','memoryview','round','__import__',
+    'complex','hash','min','set','apply',
+    'delattr','help','next','setattr','buffer',
+    'dict','hex','object','slice','coerce',
+    'dir','id','oct','sorted','intern',
+    ]
+
 if __name__ == '__main__':
+    # get a readable parse tree
     tree = parser.st2tuple(parser.suite(sys.argv[1]))
     read_tree = convert_readable(tree)
     pprint(read_tree)
+
+    # get variable references from the tree
     free, bound = find_tokens(read_tree)
     pprint((free, bound))
-    # right now assume that we want to try and import each free thing
-    free = list(set(free).difference(['print']))
+
+    # don't treat keywords as free
+    free = list(set(free).difference(PYTHON_KEYWORDS))
+    # don't treat builtins as free either
+    free = list(set(free).difference(PYTHON_BUILTINS))
+
+    # add imports for remaining free variables
     read_tree = import_packages(read_tree, free)
+
+    # run the code
     tree = convert_numeric(read_tree)
     p = parser.tuple2st(tree)
     code = p.compile('test.py')
