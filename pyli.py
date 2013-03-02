@@ -126,9 +126,44 @@ def import_packages(tree, packages):
     ntree = tuple(['file_input'] + list(imports) + list(tree[1:]))
     return ntree
 
+def get_statements(tree):
+    if isinstance(tree, basestring):
+        return []
+    if tree[0] == 'small_stmt':
+        return [tree]
+    return [stat for stats in tree for stat in get_statements(stats)]
+
 def print_last_statement(tree):
+    # recurse through and get all the statements (small_stmt)
+    stmts = get_statements(tree)
     # check if it's statement or expression
-    pass
+    last = stmts[-1]
+    if (last[1][0] == 'expr_stmt' and
+        len(last[1]) > 2 and last[1][2][0] == 'EQUAL'):
+        # extract the left hand side, replicate
+        refs = ('stmt',
+                ('simple_stmt',
+                 ('small_stmt',
+                  ('expr_stmt', last[1][1])),
+                 ('NEWLINE', '')))
+        ltree = list(tree)
+        # get the last 
+        i = (i for i,r in enumerate(reversed(ltree))
+             if r[0].lower() == r[0]).next()
+        ltree.insert(len(ltree)-i, refs)
+        tree = tuple(ltree)
+    # wrap the last statement in a print
+    i = (i for i,r in enumerate(reversed(tree)) if r[0].lower() == r[0]).next()
+    i = len(tree) - i - 1
+    ltree = list(tree)
+    ltree[i] = ('stmt',
+                ('simple_stmt',
+                 ('small_stmt',
+                  ('print_stmt',
+                   ('NAME', 'print'),
+                   ltree[i][1][1][1][1][1])),
+                 ('NEWLINE', '')))
+    return tuple(ltree)
 
 ################################################################################
 # main
@@ -137,17 +172,17 @@ if __name__ == '__main__':
     # get a readable parse tree
     tree = parser.st2tuple(parser.suite(sys.argv[1]))
     read_tree = convert_readable(tree)
-    pprint(read_tree)
+    #pprint(read_tree)
 
     # get variable references from the tree
     free, bound = find_tokens(read_tree)
-    pprint((free, bound))
+    #pprint((free, bound))
 
     # don't treat keywords as free
     free = list(set(free).difference(PYTHON_KEYWORDS))
     # don't treat builtins as free either
     free = list(set(free).difference(PYTHON_BUILTINS))
-
+    
     if set(free).intersection(['l', 'li', 'lines']):
         pass
     elif set(free).intersection(['ls', 'lis', 'lines']):
@@ -159,7 +194,7 @@ if __name__ == '__main__':
     else:
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
-        pass
+        read_tree = print_last_statement(read_tree)
         # if it's a statement, get the left hand side and print that
 
     # add imports for remaining free variables
