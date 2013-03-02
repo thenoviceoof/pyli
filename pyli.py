@@ -138,7 +138,10 @@ def print_last_statement(tree):
     stmts = get_statements(tree)
     # check if it's statement or expression
     last = stmts[-1]
-    if (last[1][0] == 'expr_stmt' and
+    if last[1][0] == 'print_stmt':
+        # we're already printing, skip
+        return tree
+    elif (last[1][0] == 'expr_stmt' and
         len(last[1]) > 2 and last[1][2][0] == 'EQUAL'):
         # extract the left hand side, replicate
         refs = ('stmt',
