@@ -152,6 +152,7 @@ def print_last_statement(tree):
              if r[0].lower() == r[0]).next()
         ltree.insert(len(ltree)-i, refs)
         tree = tuple(ltree)
+    pprint(tree)
     # wrap the last statement in a print
     i = (i for i,r in enumerate(reversed(tree)) if r[0].lower() == r[0]).next()
     i = len(tree) - i - 1
@@ -159,10 +160,11 @@ def print_last_statement(tree):
     ltree[i] = ('stmt',
                 ('simple_stmt',
                  ('small_stmt',
-                  ('print_stmt',
-                   ('NAME', 'print'),
-                   ltree[i][1][1][1][1][1])),
+                  tuple(['print_stmt',
+                         ('NAME', 'print')]
+                         + list(ltree[i][1][1][1][1][1:]))),
                  ('NEWLINE', '')))
+    pprint(ltree)
     return tuple(ltree)
 
 ################################################################################
@@ -172,7 +174,7 @@ if __name__ == '__main__':
     # get a readable parse tree
     tree = parser.st2tuple(parser.suite(sys.argv[1]))
     read_tree = convert_readable(tree)
-    #pprint(read_tree)
+    pprint(read_tree)
 
     # get variable references from the tree
     free, bound = find_tokens(read_tree)
