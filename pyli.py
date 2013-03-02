@@ -93,7 +93,7 @@ def find_tokens(tree):
         i = (i for i,t in enumerate(tree[1:]) if t[0] == 'EQUAL').next()
         return (tuple(token for t in tree[i+1:] for token in find_tokens(t)[0]),
                 tuple(token for t in tree[:i] for token in find_tokens(t)[0]))
-    # handl
+    # don't consider things within a module/object
     if tree[0] == 'trailer' and tree[1][0] == 'DOT':
         return tuple(), tuple()
     # handles cases like ('NEWLINE, '')
