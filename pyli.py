@@ -155,7 +155,6 @@ def print_last_statement(tree):
              if r[0].lower() == r[0]).next()
         ltree.insert(len(ltree)-i, refs)
         tree = tuple(ltree)
-    pprint(tree)
     # wrap the last statement in a print
     i = (i for i,r in enumerate(reversed(tree)) if r[0].lower() == r[0]).next()
     i = len(tree) - i - 1
@@ -167,7 +166,6 @@ def print_last_statement(tree):
                          ('NAME', 'print')]
                          + list(ltree[i][1][1][1][1][1:]))),
                  ('NEWLINE', '')))
-    pprint(ltree)
     return tuple(ltree)
 
 ################################################################################
@@ -181,7 +179,7 @@ if __name__ == '__main__':
 
     # get variable references from the tree
     free, bound = find_tokens(read_tree)
-    #pprint((free, bound))
+    pprint((free, bound))
 
     # don't treat keywords as free
     free = list(set(free).difference(PYTHON_KEYWORDS))
