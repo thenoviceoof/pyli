@@ -91,8 +91,8 @@ def find_tokens(tree):
     # handle assignment, left is bound, right is free
     if tree[0] == 'expr_stmt' and any(t[0] == 'EQUAL' for t in tree[1:]):
         i = (i for i,t in enumerate(tree[1:]) if t[0] == 'EQUAL').next()
-        return (tuple(token for t in tree[i+1:] for token in find_tokens(t)[0]),
-                tuple(token for t in tree[:i] for token in find_tokens(t)[0]))
+        return (tuple(token for t in tree[i+2:] for token in find_tokens(t)[0]),
+                tuple(token for t in tree[:i+1] for token in find_tokens(t)[0]))
     # don't consider things within a module/object
     if tree[0] == 'trailer' and tree[1][0] == 'DOT':
         return tuple(), tuple()
@@ -101,9 +101,12 @@ def find_tokens(tree):
         return tuple(), tuple()
     # handle every other case, assuming at least one recursion (?)
     fb = tuple(find_tokens(t) for t in (p for p in tree if isinstance(p, tuple)))
-    free, bound = zip(*fb)
-    free = tuple(x for f in free for x in f)
-    bound = tuple(x for f in bound for x in f)
+    # bound vars shadow later free vars
+    free = []
+    bound = []
+    for fs,bs in fb:
+        free.extend(list(set(fs) - set(bound)))
+        bound.extend(bs)
     return tuple(free), tuple(bound)
 
 ################################################################################
@@ -156,17 +159,26 @@ def print_last_statement(tree):
         ltree.insert(len(ltree)-i, refs)
         tree = tuple(ltree)
     # wrap the last statement in a print
-    i = (i for i,r in enumerate(reversed(tree)) if r[0].lower() == r[0]).next()
-    i = len(tree) - i - 1
-    ltree = list(tree)
-    ltree[i] = ('stmt',
-                ('simple_stmt',
-                 ('small_stmt',
-                  tuple(['print_stmt',
-                         ('NAME', 'print')]
-                         + list(ltree[i][1][1][1][1][1:]))),
-                 ('NEWLINE', '')))
-    return tuple(ltree)
+    stack = []
+    tmp_tree = tree
+    while tmp_tree[0] != 'small_stmt':
+        # get last non-token
+        i = (i for i,r in enumerate(reversed(tmp_tree))
+             if isinstance(r, tuple) and r[0].lower() == r[0]).next()
+        stack.append(len(tmp_tree) - i -1)
+        tmp_tree = tmp_tree[len(tmp_tree) - i - 1]
+    # descend into the stack
+    def replace_print(tree, stack):
+        if tree[0] == 'small_stmt':
+            # index past (expr_stmt, testlist)
+            return ('small_stmt',
+                    ('print_stmt',
+                     ('NAME', 'print'),
+                     tree[1][1][1]))
+        return tuple(replace_print(r, stack[1:]) if i == stack[0] else r
+                     for i,r in enumerate(tree))
+    tree = replace_print(tree, stack)
+    return tree
 
 ################################################################################
 # main
@@ -175,11 +187,11 @@ if __name__ == '__main__':
     # get a readable parse tree
     tree = parser.st2tuple(parser.suite(sys.argv[1]))
     read_tree = convert_readable(tree)
-    pprint(read_tree)
+    # pprint(read_tree)
 
     # get variable references from the tree
     free, bound = find_tokens(read_tree)
-    pprint((free, bound))
+    # pprint((free, bound))
 
     # don't treat keywords as free
     free = list(set(free).difference(PYTHON_KEYWORDS))
@@ -202,6 +214,7 @@ if __name__ == '__main__':
 
     # add imports for remaining free variables
     read_tree = import_packages(read_tree, free)
+    # pprint(read_tree)
 
     # run the code
     tree = convert_numeric(read_tree)
