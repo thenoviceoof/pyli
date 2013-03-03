@@ -65,7 +65,7 @@ Features:
 
 TODO
 --------------------------------------------------------------------------------
-What's left to do? Well, pretty much nothing: it currently imports
+What's left to do? Well, pretty much everything: it currently imports
 things and prints things out, but that's it. If you think this would
 be actually useful, do send me a message, since I just ran out of
 motivation with which to work on this. Or better yet, contribute!
