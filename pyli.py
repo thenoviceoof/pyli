@@ -1,3 +1,4 @@
+import argparse
 import parser
 import token
 import symbol
@@ -184,14 +185,23 @@ def print_last_statement(tree):
 # main
 
 if __name__ == '__main__':
+    aparser = argparse.ArgumentParser(description=('Bringing Python closer to '
+                                                  'the CLI'))
+    aparser.add_argument('-x', dest='debug', action='store_true',
+                         help='Enable debugging output')
+    aparser.add_argument('command', type=str, help='The code snippet to run')
+    args = aparser.parse_args()
+
     # get a readable parse tree
-    tree = parser.st2tuple(parser.suite(sys.argv[1]))
+    tree = parser.st2tuple(parser.suite(args.command))
     read_tree = convert_readable(tree)
-    # pprint(read_tree)
+    if args.debug:
+        pprint(read_tree)
 
     # get variable references from the tree
     free, bound = find_tokens(read_tree)
-    # pprint((free, bound))
+    if args.debug:
+        pprint((free, bound))
 
     # don't treat keywords as free
     free = list(set(free).difference(PYTHON_KEYWORDS))
@@ -210,11 +220,11 @@ if __name__ == '__main__':
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
         read_tree = print_last_statement(read_tree)
-        # if it's a statement, get the left hand side and print that
 
     # add imports for remaining free variables
     read_tree = import_packages(read_tree, free)
-    # pprint(read_tree)
+    if args.debug:
+        pprint(read_tree)
 
     # run the code
     tree = convert_numeric(read_tree)
