@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # "THE BEER-WARE LICENSE" (Revision 42):
 # <thenoviceoof> wrote this file. As long as you retain this notice you
 # can do whatever you want with this stuff. If we meet some day, and you think
@@ -214,7 +215,7 @@ if __name__ == '__main__':
     # don't treat builtins as free either
     free = list(set(free).difference(PYTHON_BUILTINS))
     
-    if set(free).intersection(['l', 'li', 'lines']):
+    if set(free).intersection(['l', 'li', 'line']):
         pass
     elif set(free).intersection(['ls', 'lis', 'lines']):
         pass
