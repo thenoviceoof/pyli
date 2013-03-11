@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='pyli',
-    version='0.1.1',
+    version='0.1.2',
     author='thenoviceoof',
     author_email='thenoviceoof@gmail.com',
     packages=[],
@@ -10,7 +10,7 @@ setup(
     url='https://github.com/thenoviceoof/pyli',
     license='LICENSE',
     description='Better python CLI integration',
-    long_description=open('README.md').read(),
+    long_description=open('README.rst').read(),
     install_requires=[
     ],
 )
