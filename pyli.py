@@ -8,9 +8,11 @@
 import argparse
 import parser
 import token
+import random
+import string
 import symbol
-
 import sys
+
 from pprint import pprint
 
 ################################################################################
@@ -76,6 +78,11 @@ def convert_numeric(tree):
             else:
                 return convert_numeric(s)
     return tuple(sym2int(i) for i in tree)
+
+def convert_expr(expr):
+    return convert_readable(parser.st2tuple(parser.expr(expr)))
+def convert_suite(suite):
+    return convert_readable(parser.st2tuple(parser.suite(suite)))
 
 def find_tokens(tree):
     '''
@@ -144,6 +151,20 @@ def get_statements(tree):
         return [tree]
     return [stat for stats in tree for stat in get_statements(stats)]
 
+def set_equal(tree, name, code):
+    '''
+    Insert `name = code` as the first expression in the tree
+    '''
+    equality = (('stmt',
+                 ('simple_stmt',
+                  ('small_stmt',
+                   ('expr_stmt',
+                    name,
+                    ('EQUAL', '='),
+                    code)),
+                  ('NEWLINE', ''))),)
+    return tuple(['file_input'] + list(equality) + list(tree[1:]))
+
 def print_last_statement(tree):
     # recurse through and get all the statements (small_stmt)
     stmts = get_statements(tree)
@@ -200,8 +221,7 @@ if __name__ == '__main__':
     args = aparser.parse_args()
 
     # get a readable parse tree
-    tree = parser.st2tuple(parser.suite(args.command))
-    read_tree = convert_readable(tree)
+    read_tree = convert_suite(args.command)
     if args.debug:
         pprint(read_tree)
 
@@ -219,8 +239,30 @@ if __name__ == '__main__':
         pass
     elif set(free).intersection(['ls', 'lis', 'lines']):
         pass
-    elif set(free).intersection(['input']):
-        pass
+    elif set(free).intersection(['input', 'contents', 'conts']):
+        # insert code to read the entirety of stdin into a gensym
+        gensym = None
+        while True:
+            gensym = ''.join(random.choice(string.ascii_letters)
+                             for i in range(8))
+            if gensym not in free:
+                break
+        sys_tree = convert_expr('sys.stdin.read()')[1] # get the (testlist)
+        gensym = convert_expr(gensym)[1]
+        # set the other vars equal to the gensym
+        names = set(free).intersection(['input', 'contents', 'conts'])
+        for name in names:
+            name_expr = convert_expr(name)[1]
+            read_tree = set_equal(read_tree, name_expr, gensym)
+            free.remove(name)
+        # since we insert at the beginning
+        read_tree = set_equal(read_tree, gensym, sys_tree)
+        # import sys
+        read_tree = import_packages(read_tree, ['sys'])
+        free = list(set(free).difference(['sys']))
+        # treat as a single input-less execution:
+        # get the result of the last expression/statement, and print it
+        read_tree = print_last_statement(read_tree)
     elif 'stdin' in free:
         pass
     else:

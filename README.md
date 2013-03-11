@@ -66,15 +66,18 @@ Features:
 TODO
 --------------------------------------------------------------------------------
 What's left to do? Well, pretty much everything: it currently imports
-things and prints things out, but that's it. If you think this would
-be actually useful, do send me a message, since I just ran out of
+things and prints things out, and detects the use of
+contents/input/conts, but that's it. If you think this would be
+actually useful, do send me a message, since I just ran out of
 motivation with which to work on this. Or better yet, contribute!
 
 
 LICENSE
 --------------------------------------------------------------------------------
 "THE BEER-WARE LICENSE" (Revision 42):
+
 &lt;thenoviceoof&gt; wrote this file. As long as you retain this notice you
 can do whatever you want with this stuff. If we meet some day, and you think
 this stuff is worth it, you can buy me a beer in return
+
  - thenoviceoof
