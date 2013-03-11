@@ -2,11 +2,11 @@ from distutils.core import setup
 
 setup(
     name='pyli',
-    version='0.1.0',
+    version='0.1.1',
     author='thenoviceoof',
     author_email='thenoviceoof@gmail.com',
     packages=[],
-    scripts=['bin/pyli.py'],
+    scripts=['bin/pyli'],
     url='https://github.com/thenoviceoof/pyli',
     license='LICENSE',
     description='Better python CLI integration',
