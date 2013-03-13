@@ -43,15 +43,17 @@ pyli
 ----
 
 Features:
+
 - Automatically import referred packages
 - Populate special CLI oriented variables
-  - ``line`` (``li``, ``l``)
-  - ``lines`` (``lis``, ``ls``)
-  - ``contents`` (``cont``, ``cs``)
-  - ``stdin``, ``stdout``, ``stderr``
-  - Accept arbitrary GNU style arguments (-c, --blah), and make them available
-  - Print last statement; if an assignment, print the assigned to variables
-  - If we are using ``line``, then print the last statement for each line
+
+  * ``line`` (``li``, ``l``)
+  * ``lines`` (``lis``, ``ls``)
+  * ``contents`` (``cont``, ``cs``)
+  * ``stdin``, ``stdout``, ``stderr``
+  * Accept arbitrary GNU style arguments (-c, --blah), and make them available
+  * Print last statement; if an assignment, print the assigned to variables
+  * If we are using ``line``, then print the last statement for each line
 
 pylie
 -----
@@ -67,6 +69,7 @@ example:
     cat index.html | pyli "a.g('href') for a in BeSp(cs).f_all('a')" | pyli --text='something' "r = req.get(li); li if text in r.text else None"
 
 Features:
+
 - Autocomplete
 - Look through modules for 2nd level functions to import
 
