@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='pyli',
-    version='0.1.2',
+    version='0.1.3',
     author='thenoviceoof',
     author_email='thenoviceoof@gmail.com',
     packages=[],

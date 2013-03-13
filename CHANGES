@@ -1,3 +1,4 @@
+v0.1.3, 2013/03/13 -- Fix formatting of lists in the README
 v0.1.2, 2013/03/10 -- Use rst instead of markdown for the README
 v0.1.1, 2013/03/10 -- Move script to pyli without .py
 v0.1.0, 2013/03/10 -- Initial release, with contents

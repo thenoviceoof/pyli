@@ -238,7 +238,30 @@ if __name__ == '__main__':
     if set(free).intersection(['l', 'li', 'line']):
         pass
     elif set(free).intersection(['ls', 'lis', 'lines']):
-        pass
+        # insert code to read stdin.readlines() generators
+        gensym = None
+        while True:
+            gensym = ''.join(random.choice(string.ascii_letters)
+                             for i in range(8))
+            if gensym not in free:
+                break
+        # sys_tree = convert_expr('sys.stdin.readlines()')[1] # get the (testlist)
+        sys_tree = convert_expr('lambda: yield sys.stdin.readline()')[1] # get the (testlist)
+        gensym = convert_expr(gensym)[1]
+        # set the other vars equal to the gensym
+        names = set(free).intersection(['ls', 'lis', 'lines'])
+        for name in names:
+            name_expr = convert_expr(name)[1]
+            read_tree = set_equal(read_tree, name_expr, gensym)
+            free.remove(name)
+        # since we insert at the beginning
+        read_tree = set_equal(read_tree, gensym, sys_tree)
+        # import sys
+        read_tree = import_packages(read_tree, ['sys'])
+        free = list(set(free).difference(['sys']))
+        # treat as a single input-less execution:
+        # get the result of the last expression/statement, and print it
+        read_tree = print_last_statement(read_tree)
     elif set(free).intersection(['input', 'contents', 'conts']):
         # insert code to read the entirety of stdin into a gensym
         gensym = None
