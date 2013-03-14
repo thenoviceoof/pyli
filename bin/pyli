@@ -118,6 +118,19 @@ def find_tokens(tree):
         i = (i for i,t in enumerate(tree[1:]) if t[0] == 'EQUAL').next()
         return (tuple(token for t in tree[i+2:] for token in find_tokens(t)[0]),
                 tuple(token for t in tree[:i+1] for token in find_tokens(t)[0]))
+    # in a list comprehension, assignments via in mask frees
+    if (tree[0] in ('listmaker', 'dictorsetmaker', 'testlist_comp', 'argument')
+        and len(tree) > 2 and tree[2][0] in ('list_for', 'comp_for')):
+        alls = set(token for t in tree for token in find_tokens(t)[0])
+        free, bound = find_tokens(tree[2])
+        return (tuple(alls.intersection(free).difference(bound)),
+                bound)
+    # don't use assignments via in
+    if tree[0] in ('list_for', 'comp_for'):
+        alls = set(token for t in tree for token in find_tokens(t)[0])
+        bound = set(find_tokens(tree[2])[0])
+        return (tuple(alls.difference(bound)),
+                tuple(bound))
     # don't consider things within a module/object
     if tree[0] == 'trailer' and tree[1][0] == 'DOT':
         return tuple(), tuple()
