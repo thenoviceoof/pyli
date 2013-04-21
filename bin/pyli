@@ -126,7 +126,7 @@ def find_tokens(tree):
         return (tuple(alls.intersection(free).difference(bound)),
                 bound)
     # don't use assignments via in
-    if tree[0] in ('list_for', 'comp_for'):
+    if tree[0] in ('list_for', 'comp_for', 'for_stmt'):
         alls = set(token for t in tree for token in find_tokens(t)[0])
         bound = set(find_tokens(tree[2])[0])
         return (tuple(alls.difference(bound)),
@@ -235,6 +235,34 @@ def print_last_statement(tree):
     tree = replace_print(tree, stack)
     return tree
 
+def wrap_for(tree, var, gen):
+    '''
+    Wrap all the current lines (stmt's) in file_input with a for loop
+    '''
+    var_expr = var
+    while var_expr[0] != 'expr':
+        var_expr = var_expr[1]
+        if not isinstance(var_expr, tuple):
+            raise ValueError('No expression in the variable expression')
+    return ('file_input',
+            ('stmt',
+             ('compound_stmt',
+              ('for_stmt',
+               ('NAME', 'for'),
+               ('exprlist',
+                var_expr),
+               ('NAME', 'in'),
+               gen,
+               ('COLON', ':'),
+               tuple(['suite',
+                      ('NEWLINE', ''),
+                      ('INDENT', '')] +
+                     list(tree[1:-2]) +
+                     [('DEDENT', '')]),
+               ))),
+            ('NEWLINE', ''),
+            ('ENDMARKER', ''))
+
 ################################################################################
 # main
 
@@ -260,21 +288,31 @@ if __name__ == '__main__':
     free = list(set(free).difference(PYTHON_KEYWORDS))
     # don't treat builtins as free either
     free = list(set(free).difference(PYTHON_BUILTINS))
-    
-    if set(free).intersection(['l', 'li', 'line']):
-        pass
-    elif set(free).intersection(['ls', 'lis', 'lines']):
+
+    # since we want the generator for line/lines behavior, combo them
+    if set(free).intersection(['l', 'li', 'line'] + ['ls', 'lis', 'lines']):
         # insert code to read stdin.readlines() generators
         sym_def = gensym(free)
         sym_gen = gensym(list(free) + [sym_def])
         gensym_def = convert_expr(sym_def)[1]
         gensym_gen = convert_expr(sym_gen)[1]
-        # set the other vars equal to the gensym
-        names = set(free).intersection(['ls', 'lis', 'lines'])
-        for name in names:
-            name_expr = convert_expr(name)[1]
-            read_tree = set_equal(read_tree, name_expr, gensym_gen)
-            free.remove(name)
+        if set(free).intersection(['l', 'li', 'line']):
+            # setup aliasing from the original line var
+            line_sym = gensym(free)
+            line_gensym = convert_expr(line_sym)[1]
+            for line_var in set(free).intersection(['l', 'li', 'line']):
+                line_code = convert_expr(line_var)[1]
+                read_tree = set_equal(read_tree, line_code, line_gensym)
+                free.remove(line_var)
+            # insert code to generate `for li in lines:` + aliasing
+            read_tree = wrap_for(read_tree, line_gensym, gensym_gen)
+        if set(free).intersection(['ls', 'lis', 'lines']):
+            # set the other vars equal to the gensym
+            names = set(free).intersection(['ls', 'lis', 'lines'])
+            for name in names:
+                name_expr = convert_expr(name)[1]
+                read_tree = set_equal(read_tree, name_expr, gensym_gen)
+                free.remove(name)
         # create a generator to assign to the lines
         code = '''def {0}():
     while True:
