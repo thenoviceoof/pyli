@@ -1,3 +1,4 @@
+v0.3.0, 2013/04/21 -- Support l/li/line syntax
 v0.2.1, 2013/03/24 -- Actually include the README with the package, fixes install
 v0.2.0, 2013/03/14 -- Support ls/lis/lines syntax, support list comprehensions
 v0.1.4, 2013/03/13 -- More fixes for formatting of lists in the README
