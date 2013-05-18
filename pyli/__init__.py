@@ -23,7 +23,8 @@ rsym_name = dict((v,k) for k,v in symbol.sym_name.iteritems())
 PYTHON_KEYWORDS = ['and','from','not','while','as','elif','global','print',
                    'or','with','assert','else','if','pass','yield','in','try',
                    'break','del','except','import','class','exec','raise',
-                   'continue','finally','is','return','def','for','lambda']
+                   'continue','finally','is','return','def','for','lambda',
+                   'True', 'False', 'None']
 PYTHON_BUILTINS = [
     'abs','divmod','input','open','staticmethod',
     'all','enumerate','int','ord','str',
