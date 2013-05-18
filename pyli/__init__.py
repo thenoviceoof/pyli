@@ -323,7 +323,7 @@ def main(command, debug=False):
         free = list(set(free).difference(['sys']))
         # get the result of the last expression/statement, and print it
         read_tree = print_last_statement(read_tree)
-    elif set(free).intersection(['input', 'contents', 'conts']):
+    elif set(free).intersection(['contents', 'conts', 'cs']):
         # insert code to read the entirety of stdin into a gensym
         gensym = None
         while True:
@@ -334,7 +334,7 @@ def main(command, debug=False):
         sys_tree = convert_expr('sys.stdin.read()')[1] # get the (testlist)
         gensym = convert_expr(gensym)[1]
         # set the other vars equal to the gensym
-        names = set(free).intersection(['input', 'contents', 'conts'])
+        names = set(free).intersection(['contents', 'conts', 'cs'])
         for name in names:
             name_expr = convert_expr(name)[1]
             read_tree = set_equal(read_tree, name_expr, gensym)
