@@ -1,3 +1,4 @@
+v0.4.1, 2013/05/18 -- Add tests, do some bug fixes
 v0.4.0, 2013/05/17 -- Move pyli functionality into a module
 v0.3.0, 2013/04/21 -- Support l/li/line syntax
 v0.2.1, 2013/03/24 -- Actually include the README with the package, fixes install
