@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name='pyli',
@@ -13,4 +13,5 @@ setup(
     long_description=open('README.rst').read(),
     install_requires=[
     ],
+    test_suite='tests',
 )
