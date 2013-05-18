@@ -313,7 +313,7 @@ def main(command, debug=False):
     while True:
         li = sys.stdin.readline()
         if not li: break
-        yield li
+        yield li.rstrip('\\n')
 {1} = {0}()
         '''.format(sym_def, sym_gen)
         line_generator = convert_suite(code)
