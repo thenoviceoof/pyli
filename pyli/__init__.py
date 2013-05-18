@@ -325,22 +325,17 @@ def main(command, debug=False):
         read_tree = print_last_statement(read_tree)
     elif set(free).intersection(['contents', 'conts', 'cs']):
         # insert code to read the entirety of stdin into a gensym
-        gensym = None
-        while True:
-            gensym = ''.join(random.choice(string.ascii_letters)
-                             for i in range(8))
-            if gensym not in free:
-                break
+        gensym_stdin = gensym(free)
         sys_tree = convert_expr('sys.stdin.read()')[1] # get the (testlist)
-        gensym = convert_expr(gensym)[1]
+        gensym_stdin = convert_expr(gensym_stdin)[1]
         # set the other vars equal to the gensym
         names = set(free).intersection(['contents', 'conts', 'cs'])
         for name in names:
             name_expr = convert_expr(name)[1]
-            read_tree = set_equal(read_tree, name_expr, gensym)
+            read_tree = set_equal(read_tree, name_expr, gensym_stdin)
             free.remove(name)
         # since we insert at the beginning
-        read_tree = set_equal(read_tree, gensym, sys_tree)
+        read_tree = set_equal(read_tree, gensym_stdin, sys_tree)
         # import sys
         read_tree = import_packages(read_tree, ['sys'])
         free = list(set(free).difference(['sys']))
