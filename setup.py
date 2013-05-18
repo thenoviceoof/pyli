@@ -2,10 +2,10 @@ from distutils.core import setup
 
 setup(
     name='pyli',
-    version='0.3.0',
+    version='0.4.0',
     author='thenoviceoof',
     author_email='thenoviceoof@gmail.com',
-    packages=[],
+    packages=['pyli'],
     scripts=['bin/pyli'],
     url='https://github.com/thenoviceoof/pyli',
     license='LICENSE',
