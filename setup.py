@@ -13,5 +13,8 @@ setup(
     long_description=open('README.rst').read(),
     install_requires=[
     ],
+    test_requires=[
+        'nose'
+    ],
     test_suite='tests',
 )
