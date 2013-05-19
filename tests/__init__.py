@@ -146,7 +146,7 @@ y 2
             stdin.write('hi\nbye\nnye')
             stdin.seek(0)
             pyli.main("stdin.readline()")
-            assert stdout.getvalue() == 'hi\n', stdout.getvalue()
+            assert stdout.getvalue() == 'hi\n\n', stdout.getvalue()
 
     def test_stdout(self):
         with StdoutManager() as (stdin, stdout, stderr):
