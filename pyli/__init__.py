@@ -342,8 +342,18 @@ def main(command, debug=False):
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
         read_tree = print_last_statement(read_tree)
-    elif 'stdin' in free:
-        pass
+    elif set(['stdin', 'stdout', 'stderr']).intersection(free):
+        stdvars = ['stdin', 'stdout', 'stderr']
+        for stdv in stdvars:
+            if stdv in free:
+                std_suite = convert_suite('{0} = sys.{0}'.format(stdv))
+                read_tree = insert_suite(std_suite, read_tree)
+                free.remove(stdv)
+        # import sys
+        read_tree = import_packages(read_tree, ['sys'])
+        # treat as a single input-less execution:
+        # get the result of the last expression/statement, and print it
+        read_tree = print_last_statement(read_tree)
     else:
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
