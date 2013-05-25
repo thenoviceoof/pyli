@@ -190,17 +190,25 @@ def set_equal(tree, name, code):
 def insert_suite(suite, tree):
     return tuple(['file_input'] + list(suite[1:-1]) + list(tree[1:]))
 
-def print_last_statement(tree):
+def replace_last_statement(tree, replace_tree):
+    # !!!
+    if tree[0] == 'small_stmt':
+        return ('small_stmt',
+                replace_tree)
+    return tuple(replace if i == stack[0] else r
+                 for i,r in enumerate(tree))
+
+def print_last_statement(tree, free):
     # recurse through and get all the statements (small_stmt)
     stmts = get_statements(tree)
     # check if it's statement or expression
     last = stmts[-1]
     if last[1][0] == 'print_stmt':
         # we're already printing, skip
-        return tree
+        return tree, free
     elif (last[1][0] == 'expr_stmt' and
         len(last[1]) > 2 and last[1][2][0] == 'EQUAL'):
-        # extract the left hand side, replicate
+        # it's a statement, extract the left hand side, replicate
         refs = ('stmt',
                 ('simple_stmt',
                  ('small_stmt',
@@ -212,6 +220,10 @@ def print_last_statement(tree):
              if r[0].lower() == r[0]).next()
         ltree.insert(len(ltree)-i, refs)
         tree = tuple(ltree)
+    else:
+        # it's a plain expression, have to generate a statement
+        # !!!
+        pass
     # wrap the last statement in a print
     stack = []
     tmp_tree = tree
@@ -232,7 +244,7 @@ def print_last_statement(tree):
         return tuple(replace_print(r, stack[1:]) if i == stack[0] else r
                      for i,r in enumerate(tree))
     tree = replace_print(tree, stack)
-    return tree
+    return tree, free
 
 def wrap_for(tree, var, gen):
     '''
@@ -322,7 +334,7 @@ def main(command, debug=False):
         read_tree = import_packages(read_tree, ['sys'])
         free = list(set(free).difference(['sys']))
         # get the result of the last expression/statement, and print it
-        read_tree = print_last_statement(read_tree)
+        read_tree, free = print_last_statement(read_tree, free)
     elif set(free).intersection(['contents', 'conts', 'cs']):
         # insert code to read the entirety of stdin into a gensym
         gensym_stdin = gensym(free)
@@ -341,13 +353,13 @@ def main(command, debug=False):
         free = list(set(free).difference(['sys']))
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
-        read_tree = print_last_statement(read_tree)
+        read_tree = print_last_statement(read_tree, free)
     elif 'stdin' in free:
         pass
     else:
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
-        read_tree = print_last_statement(read_tree)
+        read_tree = print_last_statement(read_tree, free)
 
     # add imports for remaining free variables
     read_tree = import_packages(read_tree, free)
