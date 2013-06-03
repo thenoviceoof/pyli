@@ -173,7 +173,7 @@ def get_statements(tree):
         return [tree]
     return [stat for stats in tree for stat in get_statements(stats)]
 
-def set_equal(tree, name, code):
+def insert_set_equal(tree, name, code):
     '''
     Insert `name = code` as the first expression in the tree
     '''
@@ -297,7 +297,7 @@ def main(command, debug=False):
             line_gensym = convert_expr(line_sym)[1]
             for line_var in set(free).intersection(['l', 'li', 'line']):
                 line_code = convert_expr(line_var)[1]
-                read_tree = set_equal(read_tree, line_code, line_gensym)
+                read_tree = insert_set_equal(read_tree, line_code, line_gensym)
                 free.remove(line_var)
             # insert code to generate `for li in lines:` + aliasing
             read_tree = wrap_for(read_tree, line_gensym, gensym_gen)
@@ -306,7 +306,7 @@ def main(command, debug=False):
             names = set(free).intersection(['ls', 'lis', 'lines'])
             for name in names:
                 name_expr = convert_expr(name)[1]
-                read_tree = set_equal(read_tree, name_expr, gensym_gen)
+                read_tree = insert_set_equal(read_tree, name_expr, gensym_gen)
                 free.remove(name)
         # create a generator to assign to the lines
         code = '''def {0}():
@@ -332,10 +332,10 @@ def main(command, debug=False):
         names = set(free).intersection(['contents', 'conts', 'cs'])
         for name in names:
             name_expr = convert_expr(name)[1]
-            read_tree = set_equal(read_tree, name_expr, gensym_stdin)
+            read_tree = insert_set_equal(read_tree, name_expr, gensym_stdin)
             free.remove(name)
         # since we insert at the beginning
-        read_tree = set_equal(read_tree, gensym_stdin, sys_tree)
+        read_tree = insert_set_equal(read_tree, gensym_stdin, sys_tree)
         # import sys
         read_tree = import_packages(read_tree, ['sys'])
         free = list(set(free).difference(['sys']))
