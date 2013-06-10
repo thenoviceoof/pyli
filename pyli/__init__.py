@@ -190,6 +190,77 @@ def insert_set_equal(tree, name, code):
 def insert_suite(suite, tree):
     return tuple(['file_input'] + list(suite[1:-1]) + list(tree[1:]))
 
+def insert_last_statement(expr, tree):
+    if len(expr) == 0 or expr[0] != 'stmt':
+        raise ValueError('Given expr is in wrong format: ' + str(expr))
+    return insert_last_statement_runner(expr, tree)[0]
+
+def insert_last_statement_runner(expr, tree):
+    '''
+    Inserts an arbitrary stmt or small_stmt at the end of the last
+    code block
+
+    Returns (edited_tree, set(True, False, None))
+        True: needs munging
+        False: no munging
+    '''
+    print tree[0]
+    # try recursing into the stmts in reverse order
+    if tree[0] in ('file_input', 'suite'):
+        si = (i for i,t in reversed(list(enumerate(tree[1:])))
+              if t[0] == 'stmt').next() + 1
+        rtree, mung = insert_last_statement_runner(expr, tree[si])
+        ltree = list(tree)
+        # do munging
+        if mung:
+            # handle suite -> simple_stmt case
+            if tree[si][0] == 'simple_stmt':
+                # convert to straight stmt
+                ltree = (ltree[:si] +
+                         [('NEWLINE', ''),
+                          ('INDENT', ''),
+                          ('stmt', tree[si][0]),
+                          ('DEDENT', '')] +
+                         ltree[si+1:])
+                si += 3
+            # insert our stmt right afterwards the last statement
+            ltree = (ltree[:si+1] +
+                     [expr] +
+                     ltree[si+1:])
+        else:
+            ltree[si] = rtree
+        tree = tuple(ltree)
+        return (tree, False)
+    # found a simple_stmt, recurse back up and let people know
+    if tree[0] == 'simple_stmt':
+        return (tree, True)
+    # recurse into intermediate states
+    if tree[0] in ('compound_stmt', 'stmt'):
+        rtree, change = insert_last_statement_runner(expr, tree[1])
+        return ((tree[0], rtree), change)
+    # find the last suite, recurse into it
+    if tree[0] in ('if_stmt', 'while_stmt', 'for_stmt', 'try_stmt', 'with_stmt'):
+        # only recurse into finally
+        if tree[0] == 'try_stmt' and any(t[0] == 'finally' for t in tree[1:]):
+            fi = [t[0] for t in tree[1:]].index('finally') + 1  # comp for [1:]
+            si = fi + 2  # suite always `finally : suite`
+            tree = tuple(insert_last_statement_runner(expr, t)[0]
+                         if i == si else
+                         t
+                         for i,t in enumerate(tree))
+        else:
+            # for each suite
+            tree = tuple(insert_last_statement_runner(expr, t)[0]
+                         if isinstance(t,tuple) and t[0] == 'suite' else
+                         t
+                         for t in tree)
+            print tree
+        return (tree, False)
+    if tree[0] in ('funcdef', 'classdef', 'decorated'):
+        return (tree, True)
+    # otherwise unexpected
+    raise ValueError('Unexpected Value')
+
 def print_last_statement(tree):
     # recurse through and get all the statements (small_stmt)
     stmts = get_statements(tree)
