@@ -190,12 +190,10 @@ def insert_set_equal(tree, name, code):
 def insert_suite(suite, tree):
     return tuple(['file_input'] + list(suite[1:-1]) + list(tree[1:]))
 
-def insert_last_statement(expr, tree):
-    if len(expr) == 0 or expr[0] != 'stmt':
-        raise ValueError('Given expr is in wrong format: ' + str(expr))
-    return insert_last_statement_runner(expr, tree)[0]
+def edit_last_stmt(tree, expr=None, last_stmt_fn=None):
+    return edit_last_stmt_runner(tree, expr, last_stmt_fn)[0]
 
-def insert_last_statement_runner(expr, tree):
+def edit_last_stmt_runner(tree, expr=None, last_stmt_fn=None):
     '''
     Inserts an arbitrary stmt or small_stmt at the end of the last
     code block
@@ -204,31 +202,33 @@ def insert_last_statement_runner(expr, tree):
         True: needs munging
         False: no munging
     '''
-    print tree[0]
     # try recursing into the stmts in reverse order
     if tree[0] in ('file_input', 'suite'):
-        si = (i for i,t in reversed(list(enumerate(tree[1:])))
-              if t[0] == 'stmt').next() + 1
-        rtree, mung = insert_last_statement_runner(expr, tree[si])
+        si = [i for i,t in reversed(list(enumerate(tree[1:])))
+              if t[0] in ('stmt', 'simple_stmt')][0] + 1
+        rtree, mung = edit_last_stmt_runner(tree[si], expr, last_stmt_fn)
         ltree = list(tree)
+        ltree[si] = rtree
         # do munging
         if mung:
             # handle suite -> simple_stmt case
-            if tree[si][0] == 'simple_stmt':
+            if ltree[si][0] == 'simple_stmt':
                 # convert to straight stmt
                 ltree = (ltree[:si] +
                          [('NEWLINE', ''),
                           ('INDENT', ''),
-                          ('stmt', tree[si][0]),
+                          ('stmt', ltree[si]),
                           ('DEDENT', '')] +
                          ltree[si+1:])
-                si += 3
+                si += 2
+            # do an in-place edit of the statement
+            if last_stmt_fn:
+                ltree[si] = last_stmt_fn(ltree[si])
             # insert our stmt right afterwards the last statement
-            ltree = (ltree[:si+1] +
-                     [expr] +
-                     ltree[si+1:])
-        else:
-            ltree[si] = rtree
+            if expr:
+                ltree = (ltree[:si+1] +
+                         [expr] +
+                         ltree[si+1:])
         tree = tuple(ltree)
         return (tree, False)
     # found a simple_stmt, recurse back up and let people know
@@ -236,7 +236,7 @@ def insert_last_statement_runner(expr, tree):
         return (tree, True)
     # recurse into intermediate states
     if tree[0] in ('compound_stmt', 'stmt'):
-        rtree, change = insert_last_statement_runner(expr, tree[1])
+        rtree, change = edit_last_stmt_runner(tree[1], expr, last_stmt_fn)
         return ((tree[0], rtree), change)
     # find the last suite, recurse into it
     if tree[0] in ('if_stmt', 'while_stmt', 'for_stmt', 'try_stmt', 'with_stmt'):
@@ -244,66 +244,90 @@ def insert_last_statement_runner(expr, tree):
         if tree[0] == 'try_stmt' and any(t[0] == 'finally' for t in tree[1:]):
             fi = [t[0] for t in tree[1:]].index('finally') + 1  # comp for [1:]
             si = fi + 2  # suite always `finally : suite`
-            tree = tuple(insert_last_statement_runner(expr, t)[0]
+            tree = tuple(edit_last_stmt_runner(t, expr, last_stmt_fn)[0]
                          if i == si else
                          t
                          for i,t in enumerate(tree))
         else:
             # for each suite
-            tree = tuple(insert_last_statement_runner(expr, t)[0]
+            tree = tuple(edit_last_stmt_runner(t, expr, last_stmt_fn)[0]
                          if isinstance(t,tuple) and t[0] == 'suite' else
                          t
                          for t in tree)
-            print tree
         return (tree, False)
     if tree[0] in ('funcdef', 'classdef', 'decorated'):
         return (tree, True)
     # otherwise unexpected
     raise ValueError('Unexpected Value')
 
-def print_last_statement(tree):
-    # recurse through and get all the statements (small_stmt)
-    stmts = get_statements(tree)
-    # check if it's statement or expression
-    last = stmts[-1]
-    if last[1][0] == 'print_stmt':
-        # we're already printing, skip
-        return tree
-    elif (last[1][0] == 'expr_stmt' and
-        len(last[1]) > 2 and last[1][2][0] == 'EQUAL'):
-        # extract the left hand side, replicate
-        refs = ('stmt',
-                ('simple_stmt',
-                 ('small_stmt',
-                  ('expr_stmt', last[1][1])),
-                 ('NEWLINE', '')))
-        ltree = list(tree)
-        # get the last 
-        i = (i for i,r in enumerate(reversed(ltree))
-             if r[0].lower() == r[0]).next()
-        ltree.insert(len(ltree)-i, refs)
-        tree = tuple(ltree)
-    # wrap the last statement in a print
-    stack = []
-    tmp_tree = tree
-    while tmp_tree[0] != 'small_stmt':
-        # get last non-token
-        i = (i for i,r in enumerate(reversed(tmp_tree))
-             if isinstance(r, tuple) and r[0].lower() == r[0]).next()
-        stack.append(len(tmp_tree) - i -1)
-        tmp_tree = tmp_tree[len(tmp_tree) - i - 1]
-    # descend into the stack
-    def replace_print(tree, stack):
-        if tree[0] == 'small_stmt':
-            # index past (expr_stmt, testlist)
-            return ('small_stmt',
-                    ('print_stmt',
-                     ('NAME', 'print'),
-                     tree[1][1][1]))
-        return tuple(replace_print(r, stack[1:]) if i == stack[0] else r
-                     for i,r in enumerate(tree))
-    tree = replace_print(tree, stack)
-    return tree
+def print_last_statement(tree, free=tuple()):
+    free_tokens = [free]
+    token = [None]
+    def ensure_equality(stmt):
+        if stmt[1][0] == 'simple_stmt':
+            # get the last small_stmt
+            esi = [i for i,t in enumerate(stmt[1][1:])
+                   if t[0] == 'small_stmt'][-1] + 1
+            # make sure the last expression is a set
+            if stmt[1][esi][1][0] == 'expr_stmt' and len(stmt[1][esi][1]) > 2:
+                # just get the name (testlist)
+                name_def = stmt[1][esi][1][1]
+            elif stmt[1][esi][1][0] == 'expr_stmt' and len(stmt[1][esi][1]) == 2:
+                # transform into an equality
+                sym_def = gensym(free)
+                free_tokens[0] = tuple(list(free) + [sym_def])
+                name_def = convert_expr(sym_def)[1]
+                code = stmt[1][esi][1][1]
+                # mung the stmt itself
+                stmt = ('stmt',
+                        tuple(list(stmt[1][:esi]) +
+                              [('small_stmt',
+                                ('expr_stmt',
+                                 name_def,
+                                 ('EQUAL', '='),
+                                 code))] +
+                              list(stmt[1][esi+1:])))
+            else:
+                name_def = None
+            # handle tuples in the name
+            if name_def:
+                def extract_name(expr):
+                    while isinstance(expr, tuple):
+                        expr = expr[1]
+                    return expr
+
+                if len(name_def) > 2:
+                    name = ','.join([extract_name(t) for t in name_def
+                                     if t[0] == 'test'])
+                    name = '({0})'.format(name)
+                else:
+                    e = name_def
+                    while isinstance(e, tuple):
+                        e = e[1]
+                    name = e
+            else:
+                name = None
+        elif (stmt[1][0] == 'compound_stmt' and
+              stmt[1][1][0] in ('funcdef', 'classdef', 'decorated')):
+            def_tuple = stmt[1][1]
+            if def_tuple[0] in ('funcdef', 'classdef'):
+                name = def_tuple[2][1]
+            else:
+                # decorated: decorators (def (token) (NAME) ...)
+                name = def_tuple[-1][1][2][1]
+        else:
+            raise ValueError('Something has gone wrong')
+        # work around for dumb scoping rules
+        token[0] = name
+        return stmt
+    # do the equality groundwork
+    tree = edit_last_stmt(tree, last_stmt_fn=ensure_equality)
+    # do the conditional print
+    if token[0]:
+        print_expr = convert_suite('''if {0} is not None:
+    print {0}'''.format(token[0]))[1]
+        tree = edit_last_stmt(tree, expr=print_expr)
+    return tree, free_tokens[0]
 
 def wrap_for(tree, var, gen):
     '''
@@ -354,6 +378,7 @@ def main(command, debug=False):
     free = list(set(free).difference(PYTHON_KEYWORDS))
     # don't treat builtins as free either
     free = list(set(free).difference(PYTHON_BUILTINS))
+    used_tokens = set(free).union(bound)
 
     # since we want the generator for line/lines behavior, combo them
     if set(free).intersection(['l', 'li', 'line'] + ['ls', 'lis', 'lines']):
@@ -393,7 +418,7 @@ def main(command, debug=False):
         read_tree = import_packages(read_tree, ['sys'])
         free = list(set(free).difference(['sys']))
         # get the result of the last expression/statement, and print it
-        read_tree = print_last_statement(read_tree)
+        read_tree, _ = print_last_statement(read_tree, free)
     elif set(free).intersection(['contents', 'conts', 'cs']):
         # insert code to read the entirety of stdin into a gensym
         gensym_stdin = gensym(free)
@@ -412,7 +437,7 @@ def main(command, debug=False):
         free = list(set(free).difference(['sys']))
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
-        read_tree = print_last_statement(read_tree)
+        read_tree, _ = print_last_statement(read_tree, free)
     elif set(['stdin', 'stdout', 'stderr']).intersection(free):
         stdvars = ['stdin', 'stdout', 'stderr']
         for stdv in stdvars:
@@ -424,11 +449,11 @@ def main(command, debug=False):
         read_tree = import_packages(read_tree, ['sys'])
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
-        read_tree = print_last_statement(read_tree)
+        read_tree, _ = print_last_statement(read_tree, free)
     else:
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
-        read_tree = print_last_statement(read_tree)
+        read_tree, _ = print_last_statement(read_tree, free)
 
     # add imports for remaining free variables
     read_tree = import_packages(read_tree, free)
