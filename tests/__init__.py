@@ -158,3 +158,145 @@ y 2
             pyli.main("stderr.write('crap')")
             assert stdout.getvalue() == '', stdout.getvalue()
             assert stderr.getvalue() == 'crap', stderr.getvalue()
+
+    # test multiple line one-liners
+    def test_mult_line_if(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('''
+if True:
+    x = 10
+else:
+    x = 20
+''')
+            assert stdout.getvalue() == '10\n', stdout.getvalue()
+
+    def test_mult_line_if_else(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('''
+if False:
+    x = 10
+else:
+    x = 20
+''')
+            assert stdout.getvalue() == '20\n', stdout.getvalue()
+
+    def test_mult_line_elif(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('''
+if False:
+    x = 10
+elif True:
+    x = 20
+else:
+    x = 30
+''')
+            assert stdout.getvalue() == '20\n', stdout.getvalue()
+
+    def test_mult_line_double_for(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('''
+for i in range(1):
+    for j in range(2):
+        i,j
+''')
+            assert stdout.getvalue() == '(0, 0)\n(0, 1)\n', stdout.getvalue()
+
+    def test_mult_line_block(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('''
+for i in range(1):
+    j = 10
+    i,j
+''')
+            assert stdout.getvalue() == '(0, 10)\n', stdout.getvalue()
+
+    def test_mult_line_for_else(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('''
+for i in []:
+    i
+else:
+    i = 20
+''')
+            assert stdout.getvalue() == '20\n', stdout.getvalue()
+
+    def test_mult_line_try(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('''
+try:
+    x = 10
+except:
+    x = 20
+''')
+            assert stdout.getvalue() == '10\n', stdout.getvalue()
+
+    def test_mult_line_except(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('''
+try:
+    x = int('')
+except:
+    x = 20
+''')
+            assert stdout.getvalue() == '20\n', stdout.getvalue()
+
+    def test_mult_line_else(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('''
+try:
+    x = 10
+except:
+    x = 20
+else:
+    x = 30
+''')
+            assert stdout.getvalue() == '30\n', stdout.getvalue()
+
+
+    def test_mult_line_finally(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('''
+try:
+    x = int('')
+except:
+    x = 20
+else:
+    x = 10
+finally:
+    x = 30
+''')
+            assert stdout.getvalue() == '30\n', stdout.getvalue()
+
+    # ending with a func/class/decorated
+    def test_end_func(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('''
+def hello():
+    return
+''')
+            assert stdout.getvalue() == '\n', stdout.getvalue()
+
+    def test_end_class(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('''
+class hello():
+    pass
+''')
+            assert stdout.getvalue() == '\n', stdout.getvalue()
+
+    def test_end_decorator(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('''
+@functools.wraps
+def hello():
+    pass
+''')
+            assert stdout.getvalue() == '\n', stdout.getvalue()
+
+    # eventually someone's going to try it
+    def test_end_import(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('''
+import math
+''')
+            assert stdout.getvalue() == '', stdout.getvalue()
