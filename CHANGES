@@ -1,3 +1,4 @@
+v0.5.1, 2013/06/11 -- Package up the gensym generator into an object
 v0.5.0, 2013/06/11 -- Implement implicit print on non-None values
 v0.4.2, 2013/06/02 -- More bug fixes, support for stdout/in/err
 v0.4.1, 2013/05/18 -- Add tests, do some bug fixes

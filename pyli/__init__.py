@@ -47,14 +47,24 @@ PYTHON_BUILTINS = [
 ################################################################################
 # parse tree utilities
 
-def gensym(exclusion, length=8):
-    gensym = None
-    while True:
-        gensym = ''.join(random.choice(string.ascii_letters)
-                         for i in range(length))
-        if gensym not in exclusion:
-            break
-    return gensym
+class GensymGenerator(object):
+    def __init__(self, initial_set):
+        self.exclude = set(initial_set)
+        super(GensymGenerator, self).__init__()
+
+    def add(self, new_exclude):
+        self.exclude.add(new_exclude)
+
+    def gensym(self, length=8):
+        gensym = None
+        while True:
+            gensym = ''.join(random.choice(string.ascii_letters)
+                             for i in range(length))
+            if gensym not in self.exclude:
+                break
+        # add to the exclusion set
+        self.add(gensym)
+        return gensym
 
 def convert_readable(tree):
     def int2sym(i):
@@ -260,8 +270,7 @@ def edit_last_stmt_runner(tree, expr=None, last_stmt_fn=None):
     # otherwise unexpected
     raise ValueError('Unexpected Value')
 
-def print_last_statement(tree, free=tuple()):
-    free_tokens = [free]
+def print_last_statement(tree, gensym_generator=None):
     token = [None]
     def ensure_equality(stmt):
         if stmt[1][0] == 'simple_stmt':
@@ -274,8 +283,7 @@ def print_last_statement(tree, free=tuple()):
                 name_def = stmt[1][esi][1][1]
             elif stmt[1][esi][1][0] == 'expr_stmt' and len(stmt[1][esi][1]) == 2:
                 # transform into an equality
-                sym_def = gensym(free)
-                free_tokens[0] = tuple(list(free) + [sym_def])
+                sym_def = gensym_generator.gensym()
                 name_def = convert_expr(sym_def)[1]
                 code = stmt[1][esi][1][1]
                 # mung the stmt itself
@@ -327,7 +335,7 @@ def print_last_statement(tree, free=tuple()):
         print_expr = convert_suite('''if {0} is not None:
     print {0}'''.format(token[0]))[1]
         tree = edit_last_stmt(tree, expr=print_expr)
-    return tree, free_tokens[0]
+    return tree
 
 def wrap_for(tree, var, gen):
     '''
@@ -378,18 +386,22 @@ def main(command, debug=False):
     free = list(set(free).difference(PYTHON_KEYWORDS))
     # don't treat builtins as free either
     free = list(set(free).difference(PYTHON_BUILTINS))
-    used_tokens = set(free).union(bound)
+    # include keywords / builtins as bound
+    bound = set(bound).union(PYTHON_KEYWORDS).union(PYTHON_BUILTINS)
+    # make a gensyms
+    gensym_generator = GensymGenerator(set(free).union(bound))
+    gensym_generator.add('sys')  # prevalent in branches below
 
     # since we want the generator for line/lines behavior, combo them
     if set(free).intersection(['l', 'li', 'line'] + ['ls', 'lis', 'lines']):
         # insert code to read stdin.readlines() generators
-        sym_def = gensym(free)
-        sym_gen = gensym(list(free) + [sym_def])
+        sym_def = gensym_generator.gensym()
+        sym_gen = gensym_generator.gensym()
         gensym_def = convert_expr(sym_def)[1]
         gensym_gen = convert_expr(sym_gen)[1]
         if set(free).intersection(['l', 'li', 'line']):
             # setup aliasing from the original line var
-            line_sym = gensym(free)
+            line_sym = gensym_generator.gensym()
             line_gensym = convert_expr(line_sym)[1]
             for line_var in set(free).intersection(['l', 'li', 'line']):
                 line_code = convert_expr(line_var)[1]
@@ -418,10 +430,10 @@ def main(command, debug=False):
         read_tree = import_packages(read_tree, ['sys'])
         free = list(set(free).difference(['sys']))
         # get the result of the last expression/statement, and print it
-        read_tree, _ = print_last_statement(read_tree, free)
+        read_tree = print_last_statement(read_tree, gensym_generator)
     elif set(free).intersection(['contents', 'conts', 'cs']):
         # insert code to read the entirety of stdin into a gensym
-        gensym_stdin = gensym(free)
+        gensym_stdin = gensym_generator.gensym()
         sys_tree = convert_expr('sys.stdin.read()')[1] # get the (testlist)
         gensym_stdin = convert_expr(gensym_stdin)[1]
         # set the other vars equal to the gensym
@@ -437,7 +449,7 @@ def main(command, debug=False):
         free = list(set(free).difference(['sys']))
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
-        read_tree, _ = print_last_statement(read_tree, free)
+        read_tree = print_last_statement(read_tree, gensym_generator)
     elif set(['stdin', 'stdout', 'stderr']).intersection(free):
         stdvars = ['stdin', 'stdout', 'stderr']
         for stdv in stdvars:
@@ -449,11 +461,11 @@ def main(command, debug=False):
         read_tree = import_packages(read_tree, ['sys'])
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
-        read_tree, _ = print_last_statement(read_tree, free)
+        read_tree = print_last_statement(read_tree, gensym_generator)
     else:
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
-        read_tree, _ = print_last_statement(read_tree, free)
+        read_tree = print_last_statement(read_tree, gensym_generator)
 
     # add imports for remaining free variables
     read_tree = import_packages(read_tree, free)
