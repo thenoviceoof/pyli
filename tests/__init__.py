@@ -61,6 +61,11 @@ class TestPyli(unittest.TestCase):
             pyli.main("sum(i for i in range(10) if i % 3 == 0 or i % 5 == 0)")
             assert stdout.getvalue() == '23\n', stdout.getvalue()
 
+    def test_lambda(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main("[1,2,3].sort(key=lambda x: -x)")
+            assert stdout.getvalue() == '[3, 2, 1]', stdout.getvalue()
+
     # test input, line/li/l
     def test_line(self):
         with StdoutManager() as (stdin, stdout, stderr):
