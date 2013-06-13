@@ -251,8 +251,8 @@ def edit_last_stmt_runner(tree, expr=None, last_stmt_fn=None):
     # find the last suite, recurse into it
     if tree[0] in ('if_stmt', 'while_stmt', 'for_stmt', 'try_stmt', 'with_stmt'):
         # only recurse into finally
-        if tree[0] == 'try_stmt' and any(t[0] == 'finally' for t in tree[1:]):
-            fi = [t[0] for t in tree[1:]].index('finally') + 1  # comp for [1:]
+        if tree[0] == 'try_stmt' and any(t[1] == 'finally' for t in tree[1:]):
+            fi = [t[1] for t in tree[1:]].index('finally') + 1  # comp for [1:]
             si = fi + 2  # suite always `finally : suite`
             tree = tuple(edit_last_stmt_runner(t, expr, last_stmt_fn)[0]
                          if i == si else
