@@ -258,6 +258,12 @@ def edit_last_stmt_runner(tree, expr=None, last_stmt_fn=None):
                          if i == si else
                          t
                          for i,t in enumerate(tree))
+        # if there's an else, don't edit the try block
+        elif tree[0] == 'try_stmt' and any(t[1] == 'else' for t in tree[1:]):
+            tree = tuple(edit_last_stmt_runner(t, expr, last_stmt_fn)[0]
+                         if i != 3 and t[0] == 'suite' else
+                         t
+                         for i,t in enumerate(tree))
         else:
             # for each suite
             tree = tuple(edit_last_stmt_runner(t, expr, last_stmt_fn)[0]

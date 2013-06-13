@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='pyli',
-    version='0.5.2',
+    version='0.5.3',
     author='thenoviceoof',
     author_email='thenoviceoof@gmail.com',
     packages=['pyli'],
