@@ -140,6 +140,14 @@ def find_tokens(tree):
         bound = set(find_tokens(tree[2])[0])
         return (tuple(alls.difference(bound)),
                 tuple(bound))
+    # don't consider names/parameters of funcs
+    if tree[0] == 'funcdef':
+        name = set(find_tokens(tree[2])[0])
+        params = set(find_tokens(tree[3])[0])
+        free, bound = find_tokens(tree[5])
+        free = set(free) - name - params
+        bound = set(bound) & name & params
+        return (tuple(free), tuple(bound))
     # don't consider things within a module/object
     if tree[0] == 'trailer' and tree[1][0] == 'DOT':
         return tuple(), tuple()

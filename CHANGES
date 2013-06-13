@@ -1,3 +1,4 @@
+v0.5.4, 2013/06/13 -- Fix logic related to treating functions as bound
 v0.5.3, 2013/06/12 -- Fix some logic related to the try-else test
 v0.5.2, 2013/06/12 -- Fix some logic related to the try-finally test
 v0.5.1, 2013/06/11 -- Package up the gensym generator into an object

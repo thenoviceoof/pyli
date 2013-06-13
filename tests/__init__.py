@@ -1,6 +1,7 @@
 import pyli
 import StringIO
 import sys
+import re
 import unittest
 
 class StdoutManager(object):
@@ -274,7 +275,8 @@ finally:
 def hello():
     return
 ''')
-            assert stdout.getvalue() == '\n', stdout.getvalue()
+            assert re.match(r'<function hello at 0x\w+>', stdout.getvalue()), \
+                stdout.getvalue()
 
     def test_end_class(self):
         with StdoutManager() as (stdin, stdout, stderr):
