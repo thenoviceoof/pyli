@@ -140,6 +140,30 @@ def find_tokens(tree):
         bound = set(find_tokens(tree[2])[0])
         return (tuple(alls.difference(bound)),
                 tuple(bound))
+    # when passing kwargs, don't count the params as free
+    if tree[0] == 'varargslist':
+        # don't shift it by 1, just use tree[1:] forever
+        ie = [i for i,t in enumerate(tree[1:]) if t[1] == '=']
+        params = [find_tokens(t)
+                  for i,t in enumerate(tree[1:]) if i+1 in ie]
+        tokens = [find_tokens(t) for i,t in enumerate(tree[1:]) if i+1 not in ie]
+        free = set(tok for f,b in tokens for tok in f)
+        bound = set(tok for f,b in tokens for tok in b)
+        free = set(free) - set(params)
+        bound = set(bound) | set(params)
+        return (tuple(free), tuple(bound))
+    if tree[0] == 'arglist':
+        free = []
+        bound = []
+        for t in tree:
+            if isinstance(t, tuple) and len(t) > 2 and t[2][1] == '=':
+                free.extend(find_tokens(t[3])[0])
+                bound.extend(find_tokens(t[1])[0])
+            else:
+                f,b = find_tokens(t)
+                free.extend(f)
+                bound.extend(b)
+        return (tuple(free), tuple(bound))
     # don't consider names/parameters of funcs
     if tree[0] == 'funcdef':
         name = set(find_tokens(tree[2])[0])
@@ -154,6 +178,12 @@ def find_tokens(tree):
         free = set(tok for f,b in toks for tok in f)
         bound = set(tok for f,b in toks for tok in b)
         bound.add(name)
+        return (tuple(free), tuple(bound))
+    if tree[0] == 'lambdef':
+        params = find_tokens(tree[2])[0]
+        free, bound = find_tokens(tree[-1])
+        bound = set(params) | set(bound)
+        free = set(free) - set(params)
         return (tuple(free), tuple(bound))
     # don't consider things within a module/object
     if tree[0] == 'trailer' and tree[1][0] == 'DOT':

@@ -63,8 +63,8 @@ class TestPyli(unittest.TestCase):
 
     def test_lambda(self):
         with StdoutManager() as (stdin, stdout, stderr):
-            pyli.main("[1,2,3].sort(key=lambda x: -x)")
-            assert stdout.getvalue() == '[3, 2, 1]', stdout.getvalue()
+            pyli.main("sorted([1,2,3], key=lambda x: -x)")
+            assert stdout.getvalue() == '[3, 2, 1]\n', stdout.getvalue()
 
     # test input, line/li/l
     def test_line(self):
