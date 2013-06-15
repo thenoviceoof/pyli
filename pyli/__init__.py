@@ -373,7 +373,7 @@ def print_last_statement(tree, gensym_generator=None):
                 name = def_tuple[2][1]
             else:
                 # decorated: decorators (def (token) (NAME) ...)
-                name = def_tuple[-1][1][2][1]
+                name = def_tuple[-1][2][1]
         else:
             raise ValueError('Something has gone wrong')
         # work around for dumb scoping rules

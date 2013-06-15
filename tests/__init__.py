@@ -298,7 +298,8 @@ class hello():
 def hello():
     pass
 ''')
-            assert stdout.getvalue() == '\n', stdout.getvalue()
+            assert re.match(r'<functools.partial object at 0x\w+>',
+                            stdout.getvalue()), stdout.getvalue()
 
     # eventually someone's going to try it
     def test_end_import(self):
