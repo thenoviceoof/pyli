@@ -289,7 +289,7 @@ def hello():
 class hello():
     pass
 ''')
-            assert stdout.getvalue() == '\n', stdout.getvalue()
+            assert stdout.getvalue() == 'pyli.hello\n', stdout.getvalue()
 
     def test_end_decorator(self):
         with StdoutManager() as (stdin, stdout, stderr):

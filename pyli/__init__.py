@@ -148,6 +148,13 @@ def find_tokens(tree):
         free = set(free) - name - params
         bound = set(bound) & name & params
         return (tuple(free), tuple(bound))
+    if tree[0] == 'classdef':
+        name = find_tokens(tree[2])[0][0]
+        toks = [find_tokens(t) for i,t in enumerate(tree[1:]) if i != 1]
+        free = set(tok for f,b in toks for tok in f)
+        bound = set(tok for f,b in toks for tok in b)
+        bound.add(name)
+        return (tuple(free), tuple(bound))
     # don't consider things within a module/object
     if tree[0] == 'trailer' and tree[1][0] == 'DOT':
         return tuple(), tuple()
