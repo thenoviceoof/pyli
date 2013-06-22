@@ -63,15 +63,27 @@ class TestPyli(unittest.TestCase):
             pyli.main('for x in range(2): x')
             assert stdout.getvalue() == '0\n1\n', stdout.getvalue()
 
+    def test_lambda(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main("sorted([1,2,3], key=lambda x: -x)")
+            assert stdout.getvalue() == '[3, 2, 1]\n', stdout.getvalue()
+
     def test_euler_1(self):
         with StdoutManager() as (stdin, stdout, stderr):
             pyli.main("sum(i for i in range(10) if i % 3 == 0 or i % 5 == 0)")
             assert stdout.getvalue() == '23\n', stdout.getvalue()
 
-    def test_lambda(self):
+    def test_calls(self):
         with StdoutManager() as (stdin, stdout, stderr):
-            pyli.main("sorted([1,2,3], key=lambda x: -x)")
-            assert stdout.getvalue() == '[3, 2, 1]\n', stdout.getvalue()
+            stdin.write('{hello: "world"}')
+            pyli.main('pickle.dumps(json.loads(conts))')
+            pickled = "(dp0\nS'hello'\np1\nS'world'\np2\ns."
+            assert stdout.getvalue() == pickled, stdout.getvalue()
+
+    def test_double_loop(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('[y for x in range(int(math.sqrt(4))) for y in range(x)]')
+            assert stdout.getvalue() == '[0]\n', stdout.getvalue()
 
     # test input, line/li/l
     def test_line(self):
