@@ -8,6 +8,7 @@
 import parser
 import token
 import random
+import re
 import string
 import symbol
 import sys
@@ -459,7 +460,7 @@ def wrap_for(tree, var, gen):
 ################################################################################
 # main
 
-def main(command, debug=False):
+def main(command, debug=False, variables={}):
     '''
     String representing pyli commands
     '''
@@ -474,11 +475,11 @@ def main(command, debug=False):
         pprint((free, bound))
 
     # don't treat keywords as free
-    free = list(set(free).difference(PYTHON_KEYWORDS))
-    # don't treat builtins as free either
-    free = list(set(free).difference(PYTHON_BUILTINS))
-    # include keywords / builtins as bound
     bound = set(bound).union(PYTHON_KEYWORDS).union(PYTHON_BUILTINS)
+    # handle CLI switch vars
+    bound = bound.union(set(variables.keys()))
+    free = list(set(free).difference(bound))
+    # make sure the builtins don't collide
     modules = tuple(m for m in modules if m[0] not in bound)
     # make a gensyms
     gensym_generator = GensymGenerator(set(free).union(bound))
@@ -558,6 +559,14 @@ def main(command, debug=False):
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
         read_tree = print_last_statement(read_tree, gensym_generator)
+
+    # handle the CLI switch vars
+    for k,v in variables.iteritems():
+        name_expr = convert_expr(k)[1]
+        # wrap in ''' for extra newline durability
+        value_esc = re.sub('"""', r'\"\"\"',v)
+        value_expr = convert_expr('"""{0}"""'.format(value_esc))[1]
+        read_tree = insert_set_equal(read_tree, name_expr, value_expr)
 
     # add imports for remaining module-looking things
     modules = [m for m in modules if m[0] in free]

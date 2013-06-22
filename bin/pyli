@@ -8,13 +8,49 @@
 
 import argparse
 import pyli
+import sys
 
 if __name__ == '__main__':
-    aparser = argparse.ArgumentParser(description=('Bringing Python closer to '
-                                                  'the CLI'))
-    aparser.add_argument('-x', dest='debug', action='store_true',
-                         help='Enable debugging output')
-    aparser.add_argument('command', type=str, help='The code snippet to run')
-    args = aparser.parse_args()
+    if len(sys.argv) == 1:
+        print '''
+{0} is a utility to make using python in conjunction with other CLI tools easier
+ - auto-imports
+ - populate variables (lines, line, contents) with stdin
+ - print the last line automatically (if not None)
+ - adds command line options as variables (other than --debug)
 
-    pyli.main(args.command, debug=args.debug)
+Check out https://github.com/thenoviceoof/pyli for more details!
+'''.format(sys.argv[0])
+    else:
+        args = sys.argv[1:]
+        debug = False
+        # strip out the debug switch
+        if '--debug' in args:
+            args.remove('--debug')
+            debug = True
+        # pass everything else as a variable
+        commands = []
+        kwargs = {}
+        while args:
+            if args[0][0] == '-':
+                if '=' in args[0]:
+                    name, val = args[0].split('=', 1)
+                    name = name.lstrip('-')
+                    kwargs[name] = val
+                    args = args[1:]
+                elif len(args) > 1 and args[1][0] != '-':
+                    name, val = args[:2]
+                    name = name.lstrip('-')
+                    kwargs[name] = val
+                    args = args[2:]
+                else:
+                    # treat as a boolean switch
+                    name = args[0].strip('-')
+                    kwargs[name] = True
+                    args = args[1:]
+            else:
+                commands.append(args[0])
+                args = args[1:]
+
+    program = '\n'.join(commands)
+    pyli.main(program, debug=debug, variables=kwargs)
