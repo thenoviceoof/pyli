@@ -321,3 +321,8 @@ import math
         with StdoutManager() as (stdin, stdout, stderr):
             pyli.main('print x', variables={'x': 'hello'})
             assert stdout.getvalue() == 'hello\n', stdout.getvalue()
+
+    def test_cli_switch_end_quote(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('print x', variables={'x': 'hello"'})
+            assert stdout.getvalue() == 'hello"\n', stdout.getvalue()

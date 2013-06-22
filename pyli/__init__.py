@@ -564,7 +564,7 @@ def main(command, debug=False, variables={}):
     for k,v in variables.iteritems():
         name_expr = convert_expr(k)[1]
         # wrap in ''' for extra newline durability
-        value_esc = re.sub('"""', r'\"\"\"',v)
+        value_esc = re.sub('"', r'\"',v)
         value_expr = convert_expr('"""{0}"""'.format(value_esc))[1]
         read_tree = insert_set_equal(read_tree, name_expr, value_expr)
 
