@@ -213,7 +213,8 @@ def find_tokens(tree):
                   if t[0] == 'trailer' and t[1][0] == 'DOT']
         module = [tree[1][1][1]] + module
         free, bound, modules = find_tokens(tree[1:])
-        modules = tuple() if module[0] in bound else (tuple(module),)
+        if module[0] not in bound:
+            modules = tuple(list(modules) + [tuple(module)])
         # generate all the sub modules
         return free, bound, modules
     # handles cases like ('NEWLINE, '')
@@ -472,7 +473,7 @@ def main(command, debug=False, variables={}):
     # get variable references from the tree
     free, bound, modules = find_tokens(read_tree)
     if debug:
-        pprint((free, bound))
+        pprint((free, bound, modules))
 
     # don't treat keywords as free
     bound = set(bound).union(PYTHON_KEYWORDS).union(PYTHON_BUILTINS)

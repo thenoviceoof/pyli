@@ -75,9 +75,8 @@ class TestPyli(unittest.TestCase):
 
     def test_calls(self):
         with StdoutManager() as (stdin, stdout, stderr):
-            stdin.write('{hello: "world"}')
-            pyli.main('pickle.dumps(json.loads(conts))')
-            pickled = "(dp0\nS'hello'\np1\nS'world'\np2\ns."
+            pyli.main('pickle.dumps(json.loads(\'{"hello": "world"}\'))')
+            pickled = "(dp0\nVhello\np1\nVworld\np2\ns.\n"
             assert stdout.getvalue() == pickled, stdout.getvalue()
 
     def test_double_loop(self):
