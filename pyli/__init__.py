@@ -123,7 +123,7 @@ def find_tokens(tree):
     # used in decorators/imports, only tree root as free
     if tree[0] == 'dotted_name':
         module = [t[1] for t in tree[1:] if t[0] == 'NAME']
-        return (tree[1][1],), tuple(), (module,)
+        return (tree[1][1],), tuple(), (tuple(module),)
     # handle assignment, left is bound, right is free
     if tree[0] == 'expr_stmt' and any(t[0] == 'EQUAL' for t in tree[1:]):
         i = (i for i,t in enumerate(tree[1:]) if t[0] == 'EQUAL').next()
@@ -213,7 +213,7 @@ def find_tokens(tree):
                   if t[0] == 'trailer' and t[1][0] == 'DOT']
         module = [tree[1][1][1]] + module
         free, bound, modules = find_tokens(tree[1:])
-        modules = tuple() if module[0] in bound else (module,)
+        modules = tuple() if module[0] in bound else (tuple(module),)
         # generate all the sub modules
         return free, bound, modules
     # handles cases like ('NEWLINE, '')
