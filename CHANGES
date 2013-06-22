@@ -1,3 +1,4 @@
+v0.7.0, 2013/06/22 -- Add support for CLI switch references
 v0.6.0, 2013/06/22 -- Add support for submodule auto-imports
 v0.5.5, 2013/06/15 -- Fix the rest of the tests
 v0.5.4, 2013/06/13 -- Fix logic related to treating functions as bound
