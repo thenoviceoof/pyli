@@ -19,7 +19,7 @@ Let's do some warmups:
 
     cat file.txt | pyli "line if 'string' in line else None" # grep
 
-    cat file.txt | pyli "sum(len(l) for l in lines)" # wc -m
+    cat file.txt | pyli "sum(len(l) + 1 for l in lines)" # wc -m
 
 And now something more complicated:
 
@@ -35,9 +35,16 @@ Maybe it makes sense to separate commands:
 
 ::
 
-    cat index.html | pyli "a.get('href') for a in bs4.BeautifulSoup(cs).find_all('a')" | pyli --text='something' "r = requests.get(li); li if text in r.text else None"
+    cat index.html | pyli "for l in [a.get('href') for a in bs4.BeautifulSoup(cs).find_all('a')]: print l" | pyli --text='something' "r = requests.get(li); li if text in r.text else None"
 
     cat index.html | pyli "hashlib.sha1(cs).hexdigest()" | pyli "encryptedfile.EncryptedFile(stdout, getpass.getpass()).write(cs)"
+
+Perhaps you want to keep it a one liner, but Python is too opinionated
+to let you do that:
+
+::
+
+    pyli -f "`ls -a`" "for l in f.split('\n'):" "    if '.git' == l: print 'git'"
 
 pyli
 ----
@@ -55,32 +62,14 @@ Features:
   * Print last statement; if an assignment, print the assigned to variables
   * If we are using ``line``, then print the last statement for each line
 
-pylie
------
-
-So your perl one-liner itch hasn't been itched enough yet? This command
-is for things that do not strictly fit into 'normal' python usage. For
-example:
-
-::
-
-    log | pyli "'{0} {1}'.fo(s(ti.ti()), l)"
-
-    cat index.html | pyli "a.g('href') for a in BeSp(cs).f_all('a')" | pyli --text='something' "r = req.get(li); li if text in r.text else None"
-
-Features:
-
-- Autocomplete
-- Look through modules for 2nd level functions to import
-
 TODO
 ----
 
-What's left to do? Well, pretty much everything: it currently imports
-things and prints things out, and detects the use of
-contents/input/conts, but that's it. If you think this would be actually
-useful, do send me a message, since I just ran out of motivation with
-which to work on this. Or better yet, contribute!
+- Move the engine to the nice-looking ``ast`` library
+- Make sure it works in more snakes than just 2.7.3
+
+Also see the `issue tracker
+<https://github.com/thenoviceoof/pyli/issues?state=open>`_
 
 LICENSE
 -------
