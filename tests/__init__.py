@@ -41,6 +41,13 @@ class TestPyli(unittest.TestCase):
             pyli.main('math.sqrt(4)')
             assert stdout.getvalue() == '2.0\n', stdout.getvalue()
 
+    def test_import_xml_child(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('xml.etree.ElementTree.fromstring('
+                      '"<?xml version=\\"1.0\\"?><hello>world</hello>")')
+            assert re.match('<Element \'hello\' at 0x\w+>',
+                            stdout.getvalue()), stdout.getvalue()
+
     def test_assignments(self):
         with StdoutManager() as (stdin, stdout, stderr):
             pyli.main('x = 2')
