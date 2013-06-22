@@ -315,3 +315,9 @@ def hello():
 import math
 ''')
             assert stdout.getvalue() == '', stdout.getvalue()
+
+    # test kwarg passing
+    def test_cli_switch_passing(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('print x', variables={'x': 'hello'})
+            assert stdout.getvalue() == 'hello\n', stdout.getvalue()
