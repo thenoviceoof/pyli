@@ -110,36 +110,43 @@ def find_tokens(tree):
     If you can't tell if a variable should be free or bound, return as free
     '''
     # base case
-    if isinstance(tree, str):
-        return tuple(), tuple()
+    if isinstance(tree, basestring):
+        return tuple(), tuple(), tuple()
     if tree[0] == 'NAME':
-        return (tree[1],), tuple()
+        return (tree[1],), tuple(), tuple()
     if tree[0] == 'import_name':
-        return tuple(), find_tokens(tree[2])[0]
+        return tuple(), find_tokens(tree[2])[0], tuple()
     # used only in imports
-    if tree[0] == 'dotted_as_name' and len(tree) > 2:
-        return (tree[3][1],), tuple()
-    # used in decorators, only tree root as free
+    if tree[0] in ('dotted_as_name', 'import_as_name') and len(tree) > 2:
+        return (tree[3][1],), tuple(), tuple()
+    # used in decorators/imports, only tree root as free
     if tree[0] == 'dotted_name':
-        return (tree[1][1],), tuple()
+        module = [t[1] for t in tree[1:] if t[0] == 'NAME']
+        return (tree[1][1],), tuple(), (module,)
     # handle assignment, left is bound, right is free
     if tree[0] == 'expr_stmt' and any(t[0] == 'EQUAL' for t in tree[1:]):
         i = (i for i,t in enumerate(tree[1:]) if t[0] == 'EQUAL').next()
-        return (tuple(token for t in tree[i+2:] for token in find_tokens(t)[0]),
-                tuple(token for t in tree[:i+1] for token in find_tokens(t)[0]))
+        bound = tuple(tok for t in tree[:i+1] for tok in find_tokens(t)[0])
+        free  = tuple(tok for t in tree[i+2:] for tok in find_tokens(t)[0])
+        modules = tuple(tok for t in tree[i+2:] for tok in find_tokens(t)[2])
+        return (free, bound, modules)
     # in a list comprehension, assignments via in mask frees
     if (tree[0] in ('listmaker', 'dictorsetmaker', 'testlist_comp', 'argument')
         and len(tree) > 2 and tree[2][0] in ('list_for', 'comp_for')):
         alls = set(token for t in tree for token in find_tokens(t)[0])
-        free, bound = find_tokens(tree[2])
-        return (tuple(alls.intersection(free).difference(bound)),
-                bound)
+        modules = set(token for t in tree for token in find_tokens(t)[2])
+        free, bound, _ = find_tokens(tree[2])
+        free = tuple(alls.intersection(free).difference(bound))
+        modules = tuple(m for m in modules if m[0] not in bound)
+        return (free, bound, modules)
     # don't use assignments via in
     if tree[0] in ('list_for', 'comp_for', 'for_stmt'):
         alls = set(token for t in tree for token in find_tokens(t)[0])
+        modules = tuple(token for t in tree for token in find_tokens(t)[2])
         bound = set(find_tokens(tree[2])[0])
+        modules = tuple(m for m in modules if m[0] not in bound)
         return (tuple(alls.difference(bound)),
-                tuple(bound))
+                tuple(bound), modules)
     # when passing kwargs, don't count the params as free
     if tree[0] == 'varargslist':
         # don't shift it by 1, just use tree[1:] forever
@@ -147,77 +154,110 @@ def find_tokens(tree):
         params = [find_tokens(t)
                   for i,t in enumerate(tree[1:]) if i+1 in ie]
         tokens = [find_tokens(t) for i,t in enumerate(tree[1:]) if i+1 not in ie]
-        free = set(tok for f,b in tokens for tok in f)
-        bound = set(tok for f,b in tokens for tok in b)
+        free = set(tok for f,b,m in tokens for tok in f)
+        bound = set(tok for f,b,m in tokens for tok in b)
+        modules = set(tok for f,b,m in tokens for tok in m)
         free = set(free) - set(params)
         bound = set(bound) | set(params)
-        return (tuple(free), tuple(bound))
+        modules = tuple(m for m in modules if m[0] not in bound)
+        return (tuple(free), tuple(bound), tuple(modules))
     if tree[0] == 'arglist':
         free = []
         bound = []
+        modules = []
         for t in tree:
             if isinstance(t, tuple) and len(t) > 2 and t[2][1] == '=':
-                free.extend(find_tokens(t[3])[0])
+                f, _, mods = find_tokens(t[3])
+                free.extend(f)
+                modules.extend(mods)
                 bound.extend(find_tokens(t[1])[0])
             else:
-                f,b = find_tokens(t)
+                f,b,m = find_tokens(t)
                 free.extend(f)
                 bound.extend(b)
-        return (tuple(free), tuple(bound))
+                modules.extend(m)
+        return tuple(free), tuple(bound), tuple(modules)
     # don't consider names/parameters of funcs
     if tree[0] == 'funcdef':
         name = set(find_tokens(tree[2])[0])
         params = set(find_tokens(tree[3])[0])
-        free, bound = find_tokens(tree[5])
+        free, bound, modules = find_tokens(tree[5])
         free = set(free) - name - params
         bound = set(bound) & name & params
-        return (tuple(free), tuple(bound))
+        modules = [m for m in modules if m[0] not in bound]
+        return tuple(free), tuple(bound), tuple(modules)
     if tree[0] == 'classdef':
         name = find_tokens(tree[2])[0][0]
         toks = [find_tokens(t) for i,t in enumerate(tree[1:]) if i != 1]
-        free = set(tok for f,b in toks for tok in f)
-        bound = set(tok for f,b in toks for tok in b)
+        free = set(tok for f,b,m in toks for tok in f)
+        bound = set(tok for f,b,m in toks for tok in b)
+        modules = set(tok for f,b,m in toks for tok in m)
         bound.add(name)
-        return (tuple(free), tuple(bound))
+        modules = [m for m in modules if m[0] not in bound]
+        return tuple(free), tuple(bound), tuple(modules)
     if tree[0] == 'lambdef':
         params = find_tokens(tree[2])[0]
-        free, bound = find_tokens(tree[-1])
+        free, bound, modules = find_tokens(tree[-1])
         bound = set(params) | set(bound)
         free = set(free) - set(params)
-        return (tuple(free), tuple(bound))
+        modules = [m for m in modules if m[0] not in bound]
+        return tuple(free), tuple(bound), tuple(modules)
     # don't consider things within a module/object
     if tree[0] == 'trailer' and tree[1][0] == 'DOT':
-        return tuple(), tuple()
+        return tuple(), tuple(), tuple()
+    if (tree[0] == 'power' and tree[1][1][0] == 'NAME' and
+        any(t[0] == 'trailer' and t[1][0] == 'DOT'
+            for t in tree[1:])):
+        module = [t[2][1] for t in tree[1:]
+                  if t[0] == 'trailer' and t[1][0] == 'DOT']
+        module = [tree[1][1][1]] + module
+        free, bound, modules = find_tokens(tree[1:])
+        modules = tuple() if module[0] in bound else (module,)
+        # generate all the sub modules
+        return free, bound, modules
     # handles cases like ('NEWLINE, '')
     if all(isinstance(t, str) for t in tree):
-        return tuple(), tuple()
+        return tuple(), tuple(), tuple()
     # handle every other case, assuming at least one recursion (?)
-    fb = tuple(find_tokens(t) for t in (p for p in tree if isinstance(p, tuple)))
+    fbm = tuple(find_tokens(t) for t in (p for p in tree
+                                         if isinstance(p, tuple)))
     # bound vars shadow later free vars
     free = []
     bound = []
-    for fs,bs in fb:
+    modules = []
+    for fs,bs,ms in fbm:
         free.extend(list(set(fs) - set(bound)))
         bound.extend(bs)
-    return tuple(free), tuple(bound)
+        modules.extend(m for m in ms if m[0] not in bs)
+    return tuple(free), tuple(bound), tuple(modules)
 
 ################################################################################
 # transformation utilities
 
+IMPORT_TEMPLATE = '''
+try:
+    import {0}
+except ImportError:
+'''
+
 def import_packages(tree, packages):
     if tree[0] != 'file_input':
         raise ValueError('This function must be given a full parse tree')
-    imports = [('stmt',
-                ('simple_stmt',
-                 ('small_stmt',
-                  ('import_stmt',
-                   ('import_name',
-                    ('NAME', 'import'),
-                    ('dotted_as_names',
-                     ('dotted_as_name',
-                      ('dotted_name',
-                       ('NAME', p))))))),
-                 ('NEWLINE', ''))) for p in packages]
+    import_str = ''
+    for plist in packages:
+        indent = ''
+        while plist:
+            package = '.'.join(plist)
+            if len(plist) > 1:
+                pack_str = IMPORT_TEMPLATE.format(package)
+            else:
+                pack_str = 'import {0}'.format(package)
+            pack_str = '\n'.join([indent + line
+                                  for line in pack_str.split('\n')])
+            import_str += pack_str
+            indent += '\t'
+            plist = plist[:-1]
+    imports = convert_suite(import_str)[1:-2]
     ntree = tuple(['file_input'] + list(imports) + list(tree[1:]))
     return ntree
 
@@ -429,7 +469,7 @@ def main(command, debug=False):
         pprint(read_tree)
 
     # get variable references from the tree
-    free, bound = find_tokens(read_tree)
+    free, bound, modules = find_tokens(read_tree)
     if debug:
         pprint((free, bound))
 
@@ -439,6 +479,7 @@ def main(command, debug=False):
     free = list(set(free).difference(PYTHON_BUILTINS))
     # include keywords / builtins as bound
     bound = set(bound).union(PYTHON_KEYWORDS).union(PYTHON_BUILTINS)
+    modules = tuple(m for m in modules if m[0] not in bound)
     # make a gensyms
     gensym_generator = GensymGenerator(set(free).union(bound))
     gensym_generator.add('sys')  # prevalent in branches below
@@ -478,7 +519,7 @@ def main(command, debug=False):
         line_generator = convert_suite(code)
         read_tree = insert_suite(line_generator, read_tree)
         # import sys
-        read_tree = import_packages(read_tree, ['sys'])
+        read_tree = import_packages(read_tree, [['sys']])
         free = list(set(free).difference(['sys']))
         # get the result of the last expression/statement, and print it
         read_tree = print_last_statement(read_tree, gensym_generator)
@@ -496,7 +537,7 @@ def main(command, debug=False):
         # since we insert at the beginning
         read_tree = insert_set_equal(read_tree, gensym_stdin, sys_tree)
         # import sys
-        read_tree = import_packages(read_tree, ['sys'])
+        read_tree = import_packages(read_tree, [['sys']])
         free = list(set(free).difference(['sys']))
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
@@ -509,7 +550,7 @@ def main(command, debug=False):
                 read_tree = insert_suite(std_suite, read_tree)
                 free.remove(stdv)
         # import sys
-        read_tree = import_packages(read_tree, ['sys'])
+        read_tree = import_packages(read_tree, [['sys']])
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
         read_tree = print_last_statement(read_tree, gensym_generator)
@@ -518,8 +559,11 @@ def main(command, debug=False):
         # get the result of the last expression/statement, and print it
         read_tree = print_last_statement(read_tree, gensym_generator)
 
-    # add imports for remaining free variables
-    read_tree = import_packages(read_tree, free)
+    # add imports for remaining module-looking things
+    modules = [m for m in modules if m[0] in free]
+    # dedupe
+    modules = set(tuple(m) for m in modules)
+    read_tree = import_packages(read_tree, modules)
     if debug:
         pprint(read_tree)
 
