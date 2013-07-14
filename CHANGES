@@ -1,3 +1,4 @@
+v1.0.1, 2013/07/13 -- Add an INSTALL section to the README
 v1.0.0, 2013/06/22 -- Fix some final bugs, release as feature complete
 v0.7.1, 2013/06/22 -- Escape all quotes for CLI refs
 v0.7.0, 2013/06/22 -- Add support for CLI switch references

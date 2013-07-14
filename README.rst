@@ -8,6 +8,25 @@ familiar with python than all the options of ``find``, but like the text
 interaction paradigm? ``pyli`` aims to make it easier to use python and
 all it's batteries in conjunction with your favorite hangout: the shell.
 
+Install
+-------
+
+``pyli`` is available via ``pip``:
+
+::
+
+    pip install pyli
+
+Or directly via ``git`` and ``setup.py``:
+
+::
+
+    git clone https://github.com/thenoviceoof/pyli.git
+
+    cd pyli
+
+    sudo python setup.py
+
 Examples
 --------
 
