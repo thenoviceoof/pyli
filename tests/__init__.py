@@ -291,6 +291,44 @@ finally:
 ''')
             assert stdout.getvalue() == '30\n', stdout.getvalue()
 
+    def test_mult_line_with(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('''
+class CM(object):
+    def __enter__(self):
+        print 'enter'
+    def __exit__(self, *args):
+        print 'exit'
+with CM():
+    print 'pony times'
+''')
+            assert stdout.getvalue() == 'enter\npony times\nexit\n', \
+                stdout.getvalue()
+
+    def test_mult_line_with_as(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('''
+class CM(object):
+    def __enter__(self):
+        print 'enter'
+        return 'pony times'
+    def __exit__(self, *args):
+        print 'exit'
+with CM() as s:
+    print s
+''')
+            assert stdout.getvalue() == 'enter\npony times\nexit\n', \
+                stdout.getvalue()
+
+    def test_mult_line_with_as_file(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('''
+with open('setup.py') as f:
+    print 'pony times'
+''')
+            assert stdout.getvalue() == 'pony times\n', \
+                stdout.getvalue()
+
     # ending with a func/class/decorated
     def test_end_func(self):
         with StdoutManager() as (stdin, stdout, stderr):
