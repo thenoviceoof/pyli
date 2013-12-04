@@ -52,5 +52,5 @@ Check out https://github.com/thenoviceoof/pyli for more details!
                 commands.append(args[0])
                 args = args[1:]
 
-    program = '\n'.join(commands)
-    pyli.main(program, debug=debug, variables=kwargs)
+        program = '\n'.join(commands)
+        pyli.main(program, debug=debug, variables=kwargs)
