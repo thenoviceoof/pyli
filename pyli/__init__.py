@@ -371,7 +371,7 @@ def edit_last_stmt_runner(tree, expr=None, last_stmt_fn=None):
     # otherwise unexpected
     raise ValueError('Unexpected Value')
 
-def print_last_statement(tree, gensym_generator=None):
+def print_last_statement(tree, gensym_generator=None, pprint_opt=False):
     token = [None]
     def ensure_equality(stmt):
         if stmt[1][0] == 'simple_stmt':
@@ -433,7 +433,11 @@ def print_last_statement(tree, gensym_generator=None):
     tree = edit_last_stmt(tree, last_stmt_fn=ensure_equality)
     # do the conditional print
     if token[0]:
-        print_expr = convert_suite('''if {0} is not None:
+        if pprint_opt:
+            print_expr = convert_suite('''if {0} is not None:
+    pprint.pprint({0})'''.format(token[0]))[1]
+        else:
+            print_expr = convert_suite('''if {0} is not None:
     print {0}'''.format(token[0]))[1]
         tree = edit_last_stmt(tree, expr=print_expr)
     return tree
@@ -469,7 +473,8 @@ def wrap_for(tree, var, gen):
 ################################################################################
 # main
 
-def main(command, debug=False, variables={}):
+# don't overwrite pprint with the arg
+def main(command, debug=False, pprint_opt=False, variables={}):
     '''
     String representing pyli commands
     '''
@@ -482,6 +487,9 @@ def main(command, debug=False, variables={}):
     free, bound, modules = find_tokens(read_tree)
     if debug:
         pprint((free, bound, modules))
+    if pprint_opt:
+        free = tuple(list(free) + ['pprint'])
+        modules = tuple(list(modules) + [('pprint', 'pprint')])
 
     # don't treat keywords as free
     bound = set(bound).union(PYTHON_KEYWORDS).union(PYTHON_BUILTINS)
@@ -532,7 +540,7 @@ def main(command, debug=False, variables={}):
         read_tree = import_packages(read_tree, [['sys']])
         free = list(set(free).difference(['sys']))
         # get the result of the last expression/statement, and print it
-        read_tree = print_last_statement(read_tree, gensym_generator)
+        read_tree = print_last_statement(read_tree, gensym_generator, pprint_opt)
     elif set(free).intersection(['contents', 'conts', 'cs']):
         # insert code to read the entirety of stdin into a gensym
         gensym_stdin = gensym_generator.gensym()
@@ -551,7 +559,7 @@ def main(command, debug=False, variables={}):
         free = list(set(free).difference(['sys']))
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
-        read_tree = print_last_statement(read_tree, gensym_generator)
+        read_tree = print_last_statement(read_tree, gensym_generator, pprint_opt)
     elif set(['stdin', 'stdout', 'stderr']).intersection(free):
         stdvars = ['stdin', 'stdout', 'stderr']
         for stdv in stdvars:
@@ -563,11 +571,11 @@ def main(command, debug=False, variables={}):
         read_tree = import_packages(read_tree, [['sys']])
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
-        read_tree = print_last_statement(read_tree, gensym_generator)
+        read_tree = print_last_statement(read_tree, gensym_generator, pprint_opt)
     else:
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
-        read_tree = print_last_statement(read_tree, gensym_generator)
+        read_tree = print_last_statement(read_tree, gensym_generator, pprint_opt)
 
     # handle the CLI switch vars
     for k,v in variables.iteritems():

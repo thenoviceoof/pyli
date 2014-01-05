@@ -329,6 +329,22 @@ with open('setup.py') as f:
             assert stdout.getvalue() == 'pony times\n', \
                 stdout.getvalue()
 
+    def test_pprint(self):
+        output = '''{0: 'thing',
+ 1: 'thing',
+ 2: 'thing',
+ 3: 'thing',
+ 4: 'thing',
+ 5: 'thing',
+ 6: 'thing',
+ 7: 'thing',
+ 8: 'thing',
+ 9: 'thing'}
+'''
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('math.exp; dict((i,"thing") for i in range(10))', pprint_opt=True)
+            assert stdout.getvalue() == output, stdout.getvalue()
+
     # ending with a func/class/decorated
     def test_end_func(self):
         with StdoutManager() as (stdin, stdout, stderr):

@@ -1,3 +1,4 @@
+v1.1.2, 2014/01/04 -- Add a --pprint option for pretty printing script output
 v1.1.1, 2013/11/04 -- Don't try to execute commands when no commands are given
 v1.1.0, 2013/07/23 -- Fixup handling of free tokens in with statements
 v1.0.1, 2013/07/13 -- Add an INSTALL section to the README

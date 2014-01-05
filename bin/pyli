@@ -24,10 +24,14 @@ Check out https://github.com/thenoviceoof/pyli for more details!
     else:
         args = sys.argv[1:]
         debug = False
-        # strip out the debug switch
+        pprint = False
+        # strip out any switches
         if '--debug' in args:
             args.remove('--debug')
             debug = True
+        if '--pprint' in args:
+            args.remove('--pprint')
+            pprint = True
         # pass everything else as a variable
         commands = []
         kwargs = {}
@@ -53,4 +57,4 @@ Check out https://github.com/thenoviceoof/pyli for more details!
                 args = args[1:]
 
         program = '\n'.join(commands)
-        pyli.main(program, debug=debug, variables=kwargs)
+        pyli.main(program, debug=debug, pprint_opt=pprint, variables=kwargs)
