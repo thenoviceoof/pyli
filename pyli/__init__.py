@@ -482,6 +482,11 @@ def main(command, debug=False, pprint_opt=False, variables={}):
     read_tree = convert_suite(command)
     if debug:
         pprint(read_tree)
+    # run some basic checks over the input
+    if (len(read_tree) < 2 or
+            read_tree[0] != 'file_input' or
+            read_tree[1][0] != 'stmt'):
+        return
 
     # get variable references from the tree
     free, bound, modules = find_tokens(read_tree)
