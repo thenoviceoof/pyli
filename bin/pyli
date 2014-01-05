@@ -6,7 +6,6 @@
 # this stuff is worth it, you can buy me a beer in return
 #  - thenoviceoof
 
-import argparse
 import pyli
 import sys
 
@@ -17,10 +16,19 @@ pyli is a utility to make using python in conjunction with other CLI tools easie
  - auto-imports
  - populate variables (lines, line, contents) with stdin
  - print the last line automatically (if not None)
- - adds command line options as variables (other than --debug)
+ - adds command line options as variables (other than those listed below)
+
+Special switches include:
+ --debug         Outputs debug information useful when developing pyli
+ --help          Outputs this message
+ --pprint        Uses pprint.pprint() instead of python's builtin print
+ --version       Outputs the current version of pyli
 
 Check out https://github.com/thenoviceoof/pyli for more details!
 '''.format(sys.argv[0])
+    elif '--version' in sys.argv:
+        version_string = '.'.join(str(v) for v in pyli.__version__)
+        print version_string
     else:
         args = sys.argv[1:]
         debug = False
