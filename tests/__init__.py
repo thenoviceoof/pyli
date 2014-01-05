@@ -391,3 +391,9 @@ import math
         with StdoutManager() as (stdin, stdout, stderr):
             pyli.main('print x', variables={'x': 'hello"'})
             assert stdout.getvalue() == 'hello"\n', stdout.getvalue()
+
+    # various bugs
+    def test_dir_module(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('dir(math)[0]')
+            assert stdout.getvalue() == '__doc__\n', stdout.getvalue()

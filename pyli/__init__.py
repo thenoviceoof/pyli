@@ -15,7 +15,7 @@ import sys
 
 from pprint import pprint
 
-__version__ = (1, 1, 5)
+__version__ = (1, 2, 0)
 
 ################################################################################
 # constants
@@ -116,7 +116,7 @@ def find_tokens(tree):
     if isinstance(tree, basestring):
         return tuple(), tuple(), tuple()
     if tree[0] == 'NAME':
-        return (tree[1],), tuple(), tuple()
+        return (tree[1],), tuple(), ((tree[1],),)
     if tree[0] == 'import_name':
         return tuple(), find_tokens(tree[2])[0], tuple()
     # used only in imports
@@ -266,7 +266,7 @@ def import_packages(tree, packages):
                 pack_str = 'import {0}'.format(package)
             pack_str = '\n'.join([indent + line
                                   for line in pack_str.split('\n')])
-            import_str += pack_str
+            import_str += pack_str + '\n'
             indent += '\t'
             plist = plist[:-1]
     imports = convert_suite(import_str)[1:-2]
