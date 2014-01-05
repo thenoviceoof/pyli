@@ -11,9 +11,9 @@ import pyli
 import sys
 
 if __name__ == '__main__':
-    if len(sys.argv) == 1:
+    if len(sys.argv) == 1 or '--help' in sys.argv:
         print '''
-{0} is a utility to make using python in conjunction with other CLI tools easier
+pyli is a utility to make using python in conjunction with other CLI tools easier
  - auto-imports
  - populate variables (lines, line, contents) with stdin
  - print the last line automatically (if not None)
