@@ -579,6 +579,46 @@ def main(command, debug=False, pprint_opt=False, variables={}):
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
         read_tree = print_last_statement(read_tree, gensym_generator, pprint_opt)
+    if set(free).intersection(['p', 'part'] + ['ps', 'parts']):
+        # insert code to read stdin.readlines() generators
+        sym_def = gensym_generator.gensym()
+        sym_gen = gensym_generator.gensym()
+        gensym_def = convert_expr(sym_def)[1]
+        gensym_gen = convert_expr(sym_gen)[1]
+        if set(free).intersection(['p', 'part']):
+            # setup aliasing from the original line/part vars
+            line_sym = gensym_generator.gensym()
+            line_gensym = convert_expr(line_sym)[1]
+            part_sym = gensym_generator.gensym()
+            part_gensym = convert_expr(part_sym)[1]
+            for part_var in set(free).intersection(['p', 'part']):
+                part_code = convert_expr(part_var)[1]
+                read_tree = insert_set_equal(read_tree, part_code, line_gensym)
+                free.remove(part_var)
+            # insert code to generate `for part in lines:` + aliasing
+            read_tree = wrap_for(read_tree, line_gensym, gensym_gen)
+        if set(free).intersection(['ps', 'parts']):
+            # set the other vars equal to the gensym
+            names = set(free).intersection(['ps', 'parts'])
+            for name in names:
+                name_expr = convert_expr(name)[1]
+                read_tree = insert_set_equal(read_tree, name_expr, gensym_gen)
+                free.remove(name)
+        # create a generator to assign to the lines
+        code = '''def {0}():
+    while True:
+        li = sys.stdin.readline()
+        if not li: break
+        yield li.rstrip('\\n').split(' ')
+{1} = {0}()
+        '''.format(sym_def, sym_gen)
+        line_generator = convert_suite(code)
+        read_tree = insert_suite(line_generator, read_tree)
+        # import sys
+        read_tree = import_packages(read_tree, [['sys']])
+        free = list(set(free).difference(['sys']))
+        # get the result of the last expression/statement, and print it
+        read_tree = print_last_statement(read_tree, gensym_generator, pprint_opt)
     else:
         # treat as a single input-less execution:
         # get the result of the last expression/statement, and print it
