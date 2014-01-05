@@ -50,6 +50,8 @@ And now something more complicated:
 
     cat file.json | pyli "pickle.dumps(json.loads(conts))" >file.pickle
 
+    cat space_sep.dat | pyli "json.dumps(dict(parts))" >file.json
+
 Maybe it makes sense to separate commands:
 
 ::
@@ -73,13 +75,24 @@ Features:
 - Automatically import referred packages
 - Populate special CLI oriented variables
 
-  * ``line`` (``li``, ``l``)
-  * ``lines`` (``lis``, ``ls``)
-  * ``contents`` (``cont``, ``cs``)
-  * ``stdin``, ``stdout``, ``stderr``
+  * ``line`` (``li``, ``l``) - Gives you access to each line
+  * ``lines`` (``lis``, ``ls``) - Access to the ``line`` generator
+  * ``contents`` (``cont``, ``cs``) - Gives you access to all of stdin
+    in one string
+  * ``part``, (``p``) - Gives you access to the different fields of a
+    space-separated line
+  * ``parts``, (``ps``) - Access to the ``part`` generator
+  * ``stdin``, ``stdout``, ``stderr`` - A shortcut to ``sys.std*`` streams
   * Accept arbitrary GNU style arguments (-c, --blah), and make them available
-  * Print last statement; if an assignment, print the assigned to variables
-  * If we are using ``line``, then print the last statement for each line
+  * Print last statement; if an assignment, print the value assigned
+    to variable(s)
+  * If we are using ``line``/``part``, then print the last statement
+    for each line
+
+Do note that you should only access one of these special variables at
+a time: no work has been put into combining these into something that
+makes sense, so if you want multiple variables, you'll have to do the
+legwork yourself.
 
 TODO
 ----
@@ -95,8 +108,8 @@ LICENSE
 
 "THE BEER-WARE LICENSE" (Revision 42):
 
-<thenoviceoof> wrote this file. As long as you retain this notice you
-can do whatever you want with this stuff. If we meet some day, and you
-think this stuff is worth it, you can buy me a beer in return
+<thenoviceoof> wrote these files. As long as you retain this notice
+you can do whatever you want with this stuff. If we meet some day, and
+you think this stuff is worth it, you can buy me a beer in return
 
 -  thenoviceoof

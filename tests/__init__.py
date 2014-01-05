@@ -183,6 +183,46 @@ y 2
             assert stdout.getvalue() == '', stdout.getvalue()
             assert stderr.getvalue() == 'crap', stderr.getvalue()
 
+    # part/p
+    def test_p_len(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            stdin.write('abs bad\ncod dud egg')
+            stdin.seek(0)
+            pyli.main("len(p)")
+            assert stdout.getvalue() == '2\n3\n', stdout.getvalue()
+
+    def test_part_interpolate(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            stdin.write('1 thing\n2 brah')
+            stdin.seek(0)
+            pyli.main("'%s: %s' % (part[0], part[1])")
+            assert stdout.getvalue() == '1: thing\n2: brah\n', stdout.getvalue()
+
+    def test_part_unequal(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            stdin.write('1 2\n3')
+            stdin.seek(0)
+            self.assertRaises(
+                IndexError,
+                pyli.main,
+                "part[1]")
+
+    # parts/ps
+    def test_ps_dict(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            stdin.write('abs bad\n')
+            stdin.seek(0)
+            pyli.main("dict(ps)")
+            assert stdout.getvalue() == "{'abs': 'bad'}\n", stdout.getvalue()
+
+    def test_parts_dict(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            stdin.write('1 thing\n2 brah')
+            stdin.seek(0)
+            pyli.main("dict((int(i),v) for i,v in parts)")
+            assert stdout.getvalue() == "{1: 'thing', 2: 'brah'}\n", \
+                stdout.getvalue()
+
     # test multiple line one-liners
     def test_mult_line_if(self):
         with StdoutManager() as (stdin, stdout, stderr):
