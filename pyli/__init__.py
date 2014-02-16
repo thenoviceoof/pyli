@@ -448,7 +448,7 @@ def print_last_statement(tree, gensym_generator=None, pprint_opt=False):
     pprint.pprint({0})'''.format(token[0]))[1]
         else:
             print_expr = convert_suite('''if {0} is not None:
-    print {0}'''.format(token[0]))[1]
+    print({0})'''.format(token[0]))[1]
         tree = edit_last_stmt(tree, expr=print_expr)
     return tree
 
