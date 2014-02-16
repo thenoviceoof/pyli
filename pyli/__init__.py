@@ -77,7 +77,7 @@ def convert_readable(tree):
             else:
                 return symbol.sym_name[i]
         else:
-            if isinstance(i, basestring):
+            if isinstance(i, str):
                 return i
             else:
                 return convert_readable(i)
@@ -85,7 +85,7 @@ def convert_readable(tree):
 
 def convert_numeric(tree):
     def sym2int(s):
-        if isinstance(s, basestring):
+        if isinstance(s, str):
             if rtok_name.get(s) is not None:
                 return rtok_name[s]
             elif rsym_name.get(s) is not None:
@@ -113,7 +113,7 @@ def find_tokens(tree):
     If you can't tell if a variable should be free or bound, return as free
     '''
     # base case
-    if isinstance(tree, basestring):
+    if isinstance(tree, str):
         return tuple(), tuple(), tuple()
     if tree[0] == 'NAME':
         return (tree[1],), tuple(), ((tree[1],),)
@@ -282,7 +282,7 @@ def import_packages(tree, packages):
     return ntree
 
 def get_statements(tree):
-    if isinstance(tree, basestring):
+    if isinstance(tree, str):
         return []
     if tree[0] == 'small_stmt':
         return [tree]
