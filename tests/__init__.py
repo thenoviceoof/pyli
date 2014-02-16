@@ -1,5 +1,9 @@
 import pyli
-import StringIO
+try:
+    import StringIO
+except ImportError:
+    # we're in py3k
+    from io import StringIO
 import sys
 import re
 import unittest
