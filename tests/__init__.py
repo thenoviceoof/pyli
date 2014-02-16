@@ -1,6 +1,6 @@
 import pyli
 try:
-    import StringIO
+    from StringIO import StringIO
 except ImportError:
     # we're in py3k
     from io import StringIO
@@ -10,9 +10,9 @@ import unittest
 
 class StdoutManager(object):
     def __enter__(self):
-        strin  = StringIO.StringIO()
-        strout = StringIO.StringIO()
-        strerr = StringIO.StringIO()
+        strin  = StringIO()
+        strout = StringIO()
+        strerr = StringIO()
 
         self._stdin  = sys.stdin
         self._stdout = sys.stdout
