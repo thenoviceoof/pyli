@@ -20,8 +20,8 @@ __version__ = (1, 4, 0)
 ################################################################################
 # constants
 
-rtok_name = dict((v,k) for k,v in token.tok_name.iteritems())
-rsym_name = dict((v,k) for k,v in symbol.sym_name.iteritems())
+rtok_name = dict((v,k) for k,v in token.tok_name.items())
+rsym_name = dict((v,k) for k,v in symbol.sym_name.items())
 
 PYTHON_KEYWORDS = ['and','from','not','while','as','elif','global','print',
                    'or','with','assert','else','if','pass','yield','in','try',
@@ -637,7 +637,7 @@ def main(command, debug=False, pprint_opt=False, variables={}):
         read_tree = print_last_statement(read_tree, gensym_generator, pprint_opt)
 
     # handle the CLI switch vars
-    for k,v in variables.iteritems():
+    for k,v in variables.items():
         name_expr = convert_expr(k)[1]
         # wrap in ''' for extra newline durability
         value_esc = re.sub('"', r'\"',v)
