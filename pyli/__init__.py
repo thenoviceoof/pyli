@@ -135,7 +135,7 @@ def find_tokens(tree):
         return (free, bound, modules)
     # in a list comprehension, assignments via in mask frees
     if (tree[0] in ('listmaker', 'dictorsetmaker', 'testlist_comp', 'argument')
-        and len(tree) > 2 and tree[2][0] in ('list_for', 'comp_for')):
+        and len(tree) > 2 and tree[2][0] in ('list_for', 'comp_for', 'gen_for')):
         alls = set(token for t in tree for token in find_tokens(t)[0])
         modules = set(token for t in tree for token in find_tokens(t)[2])
         free, bound, _ = find_tokens(tree[2])
@@ -143,7 +143,7 @@ def find_tokens(tree):
         modules = tuple(m for m in modules if m[0] not in bound)
         return (free, bound, modules)
     # don't use assignments via in
-    if tree[0] in ('list_for', 'comp_for', 'for_stmt'):
+    if tree[0] in ('list_for', 'comp_for', 'for_stmt', 'gen_for'):
         alls = set(token for t in tree for token in find_tokens(t)[0])
         modules = tuple(token for t in tree for token in find_tokens(t)[2])
         bound = set(find_tokens(tree[2])[0])
