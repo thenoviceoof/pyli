@@ -32,7 +32,7 @@ class TestPyli(unittest.TestCase):
     # test some basics
     def test_print(self):
         with StdoutManager() as (stdin, stdout, stderr):
-            pyli.main('print "hello world"')
+            pyli.main('print("hello world")')
             assert stdout.getvalue() == 'hello world\n', stdout.getvalue()
 
     def test_basic_math(self):
@@ -63,7 +63,7 @@ class TestPyli(unittest.TestCase):
 
     def test_multiple_statements(self):
         with StdoutManager() as (stdin, stdout, stderr):
-            pyli.main('print "hello"; 1+1')
+            pyli.main('print("hello"); 1+1')
             assert stdout.getvalue() == 'hello\n2\n', stdout.getvalue()
 
     def test_loop(self):
@@ -155,7 +155,7 @@ class TestPyli(unittest.TestCase):
         with StdoutManager() as (stdin, stdout, stderr):
             stdin.write('hibyenye')
             stdin.seek(0)
-            pyli.main("for c in sorted(set(conts)): print '%s %d' % (c, conts.count(c))")
+            pyli.main("for c in sorted(set(conts)): print('%s %d' % (c, conts.count(c)))")
             outcome = '''b 1
 e 2
 h 1
@@ -344,11 +344,11 @@ finally:
             pyli.main('''
 class CM(object):
     def __enter__(self):
-        print 'enter'
+        print('enter')
     def __exit__(self, *args):
-        print 'exit'
+        print('exit')
 with CM():
-    print 'pony times'
+    print('pony times')
 ''')
             assert stdout.getvalue() == 'enter\npony times\nexit\n', \
                 stdout.getvalue()
@@ -358,12 +358,12 @@ with CM():
             pyli.main('''
 class CM(object):
     def __enter__(self):
-        print 'enter'
+        print('enter')
         return 'pony times'
     def __exit__(self, *args):
-        print 'exit'
+        print('exit')
 with CM() as s:
-    print s
+    print(s)
 ''')
             assert stdout.getvalue() == 'enter\npony times\nexit\n', \
                 stdout.getvalue()
@@ -372,7 +372,7 @@ with CM() as s:
         with StdoutManager() as (stdin, stdout, stderr):
             pyli.main('''
 with open('setup.py') as f:
-    print 'pony times'
+    print('pony times')
 ''')
             assert stdout.getvalue() == 'pony times\n', \
                 stdout.getvalue()
@@ -432,12 +432,12 @@ import math
     # test kwarg passing
     def test_cli_switch_passing(self):
         with StdoutManager() as (stdin, stdout, stderr):
-            pyli.main('print x', variables={'x': 'hello'})
+            pyli.main('print(x)', variables={'x': 'hello'})
             assert stdout.getvalue() == 'hello\n', stdout.getvalue()
 
     def test_cli_switch_end_quote(self):
         with StdoutManager() as (stdin, stdout, stderr):
-            pyli.main('print x', variables={'x': 'hello"'})
+            pyli.main('print(x)', variables={'x': 'hello"'})
             assert stdout.getvalue() == 'hello"\n', stdout.getvalue()
 
     # various bugs
