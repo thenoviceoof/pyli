@@ -103,6 +103,15 @@ TODO
 Also see the `issue tracker
 <https://github.com/thenoviceoof/pyli/issues?state=open>`_
 
+Related Projects
+----------------
+In alphabetical order:
+
+- `funcpy <http://www.pixelbeat.org/scripts/funcpy>`_
+- `Oneliner <https://github.com/gvalkov/python-oneliner>`_
+- `Pyle <https://github.com/aljungberg/pyle>`_
+- `pyp <https://code.google.com/p/pyp/>`_
+
 LICENSE
 -------
 
