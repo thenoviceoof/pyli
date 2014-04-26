@@ -135,7 +135,7 @@ def find_tokens(tree):
         return (free, bound, modules)
     # in a list comprehension, assignments via in mask frees
     if (tree[0] in ('listmaker', 'dictorsetmaker', 'testlist_comp', 'argument')
-        and len(tree) > 2 and tree[2][0] in ('list_for', 'comp_for')):
+        and len(tree) > 2 and tree[2][0] in ('list_for', 'comp_for', 'gen_for')):
         alls = set(token for t in tree for token in find_tokens(t)[0])
         modules = set(token for t in tree for token in find_tokens(t)[2])
         free, bound, _ = find_tokens(tree[2])
@@ -143,7 +143,7 @@ def find_tokens(tree):
         modules = tuple(m for m in modules if m[0] not in bound)
         return (free, bound, modules)
     # don't use assignments via in
-    if tree[0] in ('list_for', 'comp_for', 'for_stmt'):
+    if tree[0] in ('list_for', 'comp_for', 'for_stmt', 'gen_for'):
         alls = set(token for t in tree for token in find_tokens(t)[0])
         modules = tuple(token for t in tree for token in find_tokens(t)[2])
         bound = set(find_tokens(tree[2])[0])
@@ -209,6 +209,14 @@ def find_tokens(tree):
     if tree[0] == 'with_item' and len(tree) > 2:
         free, bound, modules = find_tokens(tree[1:])
         as_vars = find_tokens(tree[3])[0]
+        bound = set(bound) | set(as_vars)
+        free = set(free) - set(as_vars)
+        modules = [m for m in modules if m[0] not in bound]
+        return tuple(free), tuple(bound), tuple(modules)
+    # handle with X as Y, binding Y (context managers), python 2.6 edition
+    if tree[0] == 'with_var' and len(tree) > 2:
+        free, bound, modules = find_tokens(tree[1:])
+        as_vars = find_tokens(tree[2])[0]
         bound = set(bound) | set(as_vars)
         free = set(free) - set(as_vars)
         modules = [m for m in modules if m[0] not in bound]
@@ -453,6 +461,10 @@ def wrap_for(tree, var, gen):
         var_expr = var_expr[1]
         if not isinstance(var_expr, tuple):
             raise ValueError('No expression in the variable expression')
+    # find last non-newline/endmarker, for pre-2.7
+    for i in range(len(tree)):
+        if tree[len(tree) - i - 1][0] not in ('NEWLINE', 'ENDMARKER'):
+            break
     return ('file_input',
             ('stmt',
              ('compound_stmt',
@@ -466,7 +478,7 @@ def wrap_for(tree, var, gen):
                tuple(['suite',
                       ('NEWLINE', ''),
                       ('INDENT', '')] +
-                     list(tree[1:-2]) +
+                     list(tree[1:-i]) +
                      [('DEDENT', '')]),
                ))),
             ('NEWLINE', ''),
@@ -540,7 +552,7 @@ def main(command, debug=False, pprint_opt=False, variables={}):
         if not li: break
         yield li.rstrip('\\n')
 {1} = {0}()
-        '''.format(sym_def, sym_gen)
+'''.format(sym_def, sym_gen)
         line_generator = convert_suite(code)
         read_tree = insert_suite(line_generator, read_tree)
         # import sys
@@ -611,7 +623,7 @@ def main(command, debug=False, pprint_opt=False, variables={}):
         if not li: break
         yield li.rstrip('\\n').split(' ')
 {1} = {0}()
-        '''.format(sym_def, sym_gen)
+'''.format(sym_def, sym_gen)
         line_generator = convert_suite(code)
         read_tree = insert_suite(line_generator, read_tree)
         # import sys
