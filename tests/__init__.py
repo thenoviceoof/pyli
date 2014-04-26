@@ -83,6 +83,11 @@ class TestPyli(unittest.TestCase):
             pickled = "(dp0\nVhello\np1\nVworld\np2\ns.\n"
             assert stdout.getvalue() == pickled, stdout.getvalue()
 
+    def test_empty_list(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main('[]', pprint_opt=True)
+            assert stdout.getvalue() == '[]\n', stdout.getvalue()
+
     def test_double_loop(self):
         with StdoutManager() as (stdin, stdout, stderr):
             pyli.main('[y for x in range(int(math.sqrt(4))) for y in range(x)]')
