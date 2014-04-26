@@ -540,7 +540,7 @@ def main(command, debug=False, pprint_opt=False, variables={}):
         if not li: break
         yield li.rstrip('\\n')
 {1} = {0}()
-        '''.format(sym_def, sym_gen)
+'''.format(sym_def, sym_gen)
         line_generator = convert_suite(code)
         read_tree = insert_suite(line_generator, read_tree)
         # import sys
@@ -611,7 +611,7 @@ def main(command, debug=False, pprint_opt=False, variables={}):
         if not li: break
         yield li.rstrip('\\n').split(' ')
 {1} = {0}()
-        '''.format(sym_def, sym_gen)
+'''.format(sym_def, sym_gen)
         line_generator = convert_suite(code)
         read_tree = insert_suite(line_generator, read_tree)
         # import sys
