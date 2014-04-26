@@ -128,7 +128,10 @@ def find_tokens(tree):
         return (tree[1][1],), tuple(), (tuple(module),)
     # handle assignment, left is bound, right is free
     if tree[0] == 'expr_stmt' and any(t[0] == 'EQUAL' for t in tree[1:]):
-        i = (i for i,t in enumerate(tree[1:]) if t[0] == 'EQUAL').next()
+        if sys.version_info >= (3,0):
+            i = (i for i,t in enumerate(tree[1:]) if t[0] == 'EQUAL').__next__()
+        else:
+            i = (i for i,t in enumerate(tree[1:]) if t[0] == 'EQUAL').next()
         bound = tuple(tok for t in tree[:i+1] for tok in find_tokens(t)[0])
         free  = tuple(tok for t in tree[i+2:] for tok in find_tokens(t)[0])
         modules = tuple(tok for t in tree[i+2:] for tok in find_tokens(t)[2])
