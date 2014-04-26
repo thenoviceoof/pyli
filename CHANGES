@@ -1,3 +1,4 @@
+v1.4.0, 2014/04/26 -- Add support for 2.6.9 snakes (probably 2.6.*)
 v1.3.0, 2014/01/05 -- Add p/part and ps/parts as special variables
 v1.2.0, 2014/01/04 -- Fix handling of bare module names
 v1.1.5, 2014/01/04 -- Add a --version option

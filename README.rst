@@ -98,7 +98,7 @@ TODO
 ----
 
 - Move the engine to the nice-looking ``ast`` library
-- Make sure it works in more snakes than just 2.7.3
+- Make sure it works in more snakes than just 2.7.3 / 2.6.9
 
 Also see the `issue tracker
 <https://github.com/thenoviceoof/pyli/issues?state=open>`_
