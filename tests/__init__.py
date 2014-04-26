@@ -45,8 +45,12 @@ class TestPyli(unittest.TestCase):
         with StdoutManager() as (stdin, stdout, stderr):
             pyli.main('xml.etree.ElementTree.fromstring('
                       '"<?xml version=\\"1.0\\"?><hello>world</hello>")')
-            assert re.match('<Element \'hello\' at 0x\w+>',
-                            stdout.getvalue()), stdout.getvalue()
+            if sys.version_info < (2, 7):
+                assert re.match('<Element hello at \w+>',
+                                stdout.getvalue()), stdout.getvalue()
+            else:
+                assert re.match('<Element \'hello\' at 0x\w+>',
+                                stdout.getvalue()), stdout.getvalue()
 
     def test_assignments(self):
         with StdoutManager() as (stdin, stdout, stderr):
