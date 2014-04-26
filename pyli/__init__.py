@@ -213,6 +213,14 @@ def find_tokens(tree):
         free = set(free) - set(as_vars)
         modules = [m for m in modules if m[0] not in bound]
         return tuple(free), tuple(bound), tuple(modules)
+    # handle with X as Y, binding Y (context managers), python 2.6 edition
+    if tree[0] == 'with_var' and len(tree) > 2:
+        free, bound, modules = find_tokens(tree[1:])
+        as_vars = find_tokens(tree[2])[0]
+        bound = set(bound) | set(as_vars)
+        free = set(free) - set(as_vars)
+        modules = [m for m in modules if m[0] not in bound]
+        return tuple(free), tuple(bound), tuple(modules)
     # don't consider things within a module/object
     if tree[0] == 'trailer' and tree[1][0] == 'DOT':
         return tuple(), tuple(), tuple()
