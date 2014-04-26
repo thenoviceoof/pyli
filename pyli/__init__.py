@@ -453,6 +453,10 @@ def wrap_for(tree, var, gen):
         var_expr = var_expr[1]
         if not isinstance(var_expr, tuple):
             raise ValueError('No expression in the variable expression')
+    # find last non-newline/endmarker, for pre-2.7
+    for i in range(len(tree)):
+        if tree[len(tree) - i - 1][0] not in ('NEWLINE', 'ENDMARKER'):
+            break
     return ('file_input',
             ('stmt',
              ('compound_stmt',
@@ -466,7 +470,7 @@ def wrap_for(tree, var, gen):
                tuple(['suite',
                       ('NEWLINE', ''),
                       ('INDENT', '')] +
-                     list(tree[1:-2]) +
+                     list(tree[1:-i]) +
                      [('DEDENT', '')]),
                ))),
             ('NEWLINE', ''),
