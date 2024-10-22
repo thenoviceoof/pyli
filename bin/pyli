@@ -6,12 +6,14 @@
 # this stuff is worth it, you can buy me a beer in return
 #  - thenoviceoof
 
+from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
 import pyli
 import sys
 
-if __name__ == '__main__':
-    if len(sys.argv) == 1 or '--help' in sys.argv:
-        print '''
+HELP_MSG = '''
 pyli is a utility to make using python in conjunction with other CLI tools easier
  - auto-imports
  - populate variables (lines, line, contents) with stdin
@@ -25,10 +27,14 @@ Special switches include:
  --version       Outputs the current version of pyli
 
 Check out https://github.com/thenoviceoof/pyli for more details!
-'''.format(sys.argv[0])
+'''
+
+if __name__ == '__main__':
+    if len(sys.argv) == 1 or '--help' in sys.argv:
+        print(HELP_MSG.format(sys.argv[0]))
     elif '--version' in sys.argv:
         version_string = '.'.join(str(v) for v in pyli.__version__)
-        print version_string
+        print(version_string)
     else:
         args = sys.argv[1:]
         debug = False

@@ -5,6 +5,9 @@
 # this stuff is worth it, you can buy me a beer in return
 #  - thenoviceoof
 
+from builtins import range
+from past.builtins import basestring
+from builtins import object
 import parser
 import token
 import random
@@ -20,8 +23,8 @@ __version__ = (1, 4, 1)
 ################################################################################
 # constants
 
-rtok_name = dict((v,k) for k,v in token.tok_name.iteritems())
-rsym_name = dict((v,k) for k,v in symbol.sym_name.iteritems())
+rtok_name = dict((v,k) for k,v in token.tok_name.items())
+rsym_name = dict((v,k) for k,v in symbol.sym_name.items())
 
 PYTHON_KEYWORDS = ['and','from','not','while','as','elif','global','print',
                    'or','with','assert','else','if','pass','yield','in','try',
@@ -128,7 +131,7 @@ def find_tokens(tree):
         return (tree[1][1],), tuple(), (tuple(module),)
     # handle assignment, left is bound, right is free
     if tree[0] == 'expr_stmt' and any(t[0] == 'EQUAL' for t in tree[1:]):
-        i = (i for i,t in enumerate(tree[1:]) if t[0] == 'EQUAL').next()
+        i = next((i for i,t in enumerate(tree[1:]) if t[0] == 'EQUAL'))
         bound = tuple(tok for t in tree[:i+1] for tok in find_tokens(t)[0])
         free  = tuple(tok for t in tree[i+2:] for tok in find_tokens(t)[0])
         modules = tuple(tok for t in tree[i+2:] for tok in find_tokens(t)[2])
@@ -637,7 +640,7 @@ def main(command, debug=False, pprint_opt=False, variables={}):
         read_tree = print_last_statement(read_tree, gensym_generator, pprint_opt)
 
     # handle the CLI switch vars
-    for k,v in variables.iteritems():
+    for k,v in variables.items():
         name_expr = convert_expr(k)[1]
         # wrap in ''' for extra newline durability
         value_esc = re.sub('"', r'\"',v)

@@ -1,14 +1,17 @@
+from future import standard_library
+standard_library.install_aliases()
+from builtins import object
 import pyli
-import StringIO
+import io
 import sys
 import re
 import unittest
 
 class StdoutManager(object):
     def __enter__(self):
-        strin  = StringIO.StringIO()
-        strout = StringIO.StringIO()
-        strerr = StringIO.StringIO()
+        strin  = io.StringIO()
+        strout = io.StringIO()
+        strerr = io.StringIO()
 
         self._stdin  = sys.stdin
         self._stdout = sys.stdout
