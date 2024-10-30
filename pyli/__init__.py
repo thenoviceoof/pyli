@@ -1,5 +1,6 @@
 import ast
 from pyli.refs import find_free_references
+from pyli.preamble import set_intro_variables
 
 def main(code: str,
          debug: bool = False,
@@ -20,6 +21,9 @@ def main(code: str,
 
     # Handle any special variables and output on a case-by-case basis.
     # TODO
+
+    # Add variables passed in from the CLI.
+    set_intro_variables(tree, variables)
 
     # Add imports for the rest of the free variables.
     # TODO
