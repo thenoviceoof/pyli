@@ -107,7 +107,7 @@ def find_all_references(node: ast.AST, bound_vars: set | None = None) -> (set, s
     elif (isinstance(node, ast.For) or
           isinstance(node, ast.AsyncFor)):
         # TODO
-        pass
+        return (set(), set())
     elif isinstance(node, ast.ExceptHandler):
         bound_vars, free_vars = find_multiple_node_references(node.body, bound_vars = bound_vars)
         if node.name is not None:
@@ -116,20 +116,20 @@ def find_all_references(node: ast.AST, bound_vars: set | None = None) -> (set, s
     elif (isinstance(node, ast.With) or
           isinstance(node, ast.AsyncWith)):
         # TODO
-        pass
+        return (set(), set())
     elif (sys.version_info >= (3, 10, 0) and isinstance(node, ast.Match)):
         # TODO
-        pass
+        return (set(), set())
     elif (isinstance(node, ast.FunctionDef) or
           isinstance(node, ast.AsyncFunctionDef)):
         # TODO
-        pass
+        return (set(), set())
     elif isinstance(node, ast.Lambda):
         # TODO
-        pass
+        return (set(), set())
     elif isinstance(node, ast.ClassDef):
         # TODO
-        pass
+        return (set(), set())
     # Handle actual binds.
     elif (isinstance(node, ast.Assign) or
           isinstance(node, ast.AnnAssign) or
