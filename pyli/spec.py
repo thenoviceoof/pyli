@@ -44,9 +44,7 @@ def set_variable_to_name(target_name: str, source_name: str) -> ast.AST:
 def wrap_statement_with_print(node: ast.AST) -> ast.AST:
     if isinstance(node, ast.Expr):
         # Check if the expression is already wrapped in a print statement.
-        if (isinstance(node.value, ast.Call) and
-            isinstance(node.value.func, ast.Name) and
-            node.value.func.id == 'print'):
+        if is_print(node.value):
             return node
         # If our given node is an Expr (statement-expression), unwrap
         # it before putting it into a print(...).
@@ -55,8 +53,16 @@ def wrap_statement_with_print(node: ast.AST) -> ast.AST:
                                    args=[node.value], keywords=[]))
         ast.copy_location(print_expr, node)
         return print_expr
+    elif isinstance(node, ast.For):
+        pass
     else:
-        raise ValueError('Unhandled node type.')
+        raise ValueError('Unhandled node type: {}.'.format(node))
+
+def is_print(node: ast.AST) -> bool:
+    '''Check if the given node represents a print(...) call.'''
+    return (isinstance(node, ast.Call) and
+            isinstance(node.func, ast.Name) and
+            node.func.id == 'print')
         
 def create_stdin_reader() -> list[ast.AST]:
     code = '''
