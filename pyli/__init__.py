@@ -1,6 +1,7 @@
 import ast
 from pyli.refs import find_free_references
 from pyli.preamble import set_intro_variables
+from pyli.spec import handle_special_variables
 
 def main(code: str,
          debug: bool = False,
@@ -20,7 +21,7 @@ def main(code: str,
         print(free_vars)
 
     # Handle any special variables and output on a case-by-case basis.
-    # TODO
+    free_vars = handle_special_variables(tree, free_vars)
 
     # Add variables passed in from the CLI.
     set_intro_variables(tree, variables)
@@ -29,6 +30,7 @@ def main(code: str,
     # TODO
 
     # Compile and execute the code.
+    ast.fix_missing_locations(tree)
     bytecode = compile(
         tree,
         '<generated code>',  # filename
