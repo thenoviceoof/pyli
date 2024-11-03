@@ -1,6 +1,6 @@
 import ast
 from pyli.refs import find_free_references
-from pyli.preamble import set_intro_variables
+from pyli.preamble import set_intro_variables, create_imports
 from pyli.spec import handle_special_variables
 
 def main(code: str,
@@ -27,7 +27,7 @@ def main(code: str,
     set_intro_variables(tree, variables)
 
     # Add imports for the rest of the free variables.
-    # TODO
+    create_imports(tree, free_vars)
 
     # Compile and execute the code.
     ast.fix_missing_locations(tree)
