@@ -5,14 +5,16 @@ PREFIX = 'PYLI_RESERVED_'
 SPEC_PER_LINE = set(('l', 'li', 'line'))
 SPEC_LINE_GEN = set(('ls', 'lis', 'lines'))
 
-def handle_special_variables(tree: ast.AST, free_variables: set[str]) -> set[str]:
+def handle_special_variables(tree: ast.AST,
+                             free_variables: set[str],
+                             pprint: bool) -> set[str]:
     if free_variables & SPEC_PER_LINE:
         # Create a stdin line generator.
         stdin_nodes = create_stdin_reader()
         tmp_line_name = PREFIX + 'line'
         aliasing = [set_variable_to_name(v, tmp_line_name)
                     for v in free_variables & SPEC_PER_LINE]
-        wrap_last_statement_with_print(tree.body)
+        wrap_last_statement_with_print(tree.body, pprint)
         # Execute the code per line.
         for_node = ast.For(
             target = ast.Name(id=tmp_line_name, ctx=ast.Store()),
@@ -28,19 +30,19 @@ def handle_special_variables(tree: ast.AST, free_variables: set[str]) -> set[str
         aliasing = [set_variable_to_name(v, PREFIX + 'lines')
                     for v in free_variables & SPEC_LINE_GEN]
         # Wrap the last statement with print(...).
-        wrap_last_statement_with_print(tree.body)
+        wrap_last_statement_with_print(tree.body, pprint)
         tree.body = stdin_nodes + aliasing + tree.body
         return (free_variables - SPEC_LINE_GEN) | set(('sys',))
     else:
         # No special behavior required, just make sure to print the last statement.
-        wrap_last_statement_with_print(tree.body)
+        wrap_last_statement_with_print(tree.body, pprint)
         return free_variables
 
 def set_variable_to_name(target_name: str, source_name: str) -> ast.AST:
     return ast.Assign(targets=[ast.Name(id=target_name, ctx=ast.Store())],
                       value=ast.Name(id=source_name, ctx=ast.Load()))
 
-def wrap_last_statement_with_print(stmts: ast.AST) -> None:
+def wrap_last_statement_with_print(stmts: ast.AST, pprint: bool) -> None:
     '''Given an AST body, wrap the "last" statement in a call to print(...).'''
     last_node = stmts[-1]
     if isinstance(last_node, ast.Expr):
@@ -50,8 +52,13 @@ def wrap_last_statement_with_print(stmts: ast.AST) -> None:
         # If our given node is an Expr (statement-expression), unwrap
         # it before putting it into a print(...).
         # See https://stackoverflow.com/a/32429203
-        print_expr = ast.Expr(ast.Call(func=ast.Name(id='print', ctx=ast.Load()),
-                                       args=[last_node.value], keywords=[]))
+        print_expr = (
+            ast.Expr(ast.Call(func=ast.Attribute(value=ast.Name(id='pprint', ctx=ast.Load()),
+                                                 attr='pprint', ctx=ast.Load()),
+                              args=[last_node.value], keywords=[]))
+            if pprint else
+            ast.Expr(ast.Call(func=ast.Name(id='print', ctx=ast.Load()),
+                              args=[last_node.value], keywords=[])))
         ast.copy_location(print_expr, last_node)
         stmts[-1] = print_expr
     elif (isinstance(last_node, ast.Assign) or
@@ -83,24 +90,24 @@ def wrap_last_statement_with_print(stmts: ast.AST) -> None:
         # Either way, we need to print the last statement of each
         # branch, and since we recurse we should get every branch
         # automatically.
-        wrap_last_statement_with_print(last_node.body)
+        wrap_last_statement_with_print(last_node.body, pprint)
         if len(last_node.orelse):
-            wrap_last_statement_with_print(last_node.orelse)
+            wrap_last_statement_with_print(last_node.orelse, pprint)
     elif (isinstance(last_node, ast.For) or
           isinstance(last_node, ast.While)):
         # TODO: unclear what exactly should happen here.
         pass
     elif isinstance(last_node, ast.Try):
         # TODO: don't edit the try block if the there's a finally or else.
-        wrap_last_statement_with_print(last_node.body)
+        wrap_last_statement_with_print(last_node.body, pprint)
         # I think you could argue that we should not be printing
         # exception handlers, but the user is doing custom work they
         # might want printed.
         for handler in last_node.handlers:
             assert isinstance(handler, ast.ExceptHandler)
-            wrap_last_statement_with_print(handler.body)
+            wrap_last_statement_with_print(handler.body, pprint)
     elif isinstance(last_node, ast.With):
-        wrap_last_statement_with_print(last_node.body)
+        wrap_last_statement_with_print(last_node.body, pprint)
     # TODO: handle `match`.
     else:
         # There are many statements that shouldn't be printed, like

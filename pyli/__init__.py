@@ -19,9 +19,11 @@ def main(code: str,
     free_vars = find_free_references(tree)
     if debug:
         print(free_vars)
+    if pprint_opt:
+        free_vars.add('pprint')
 
     # Handle any special variables and output on a case-by-case basis.
-    free_vars = handle_special_variables(tree, free_vars)
+    free_vars = handle_special_variables(tree, free_vars, pprint_opt)
 
     # Add variables passed in from the CLI.
     set_intro_variables(tree, variables)
