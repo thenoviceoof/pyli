@@ -25,6 +25,7 @@ def main(code: str,
 
     # Add variables passed in from the CLI.
     set_intro_variables(tree, variables)
+    free_vars -= set(variables.keys())
 
     # Add imports for the rest of the free variables.
     create_imports(tree, free_vars)

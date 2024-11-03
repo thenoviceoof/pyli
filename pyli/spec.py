@@ -21,7 +21,7 @@ def handle_special_variables(tree: ast.AST, free_variables: set[str]) -> set[str
             orelse = []
         )
         tree.body = stdin_nodes + [for_node]
-        return free_variables - SPEC_PER_LINE + set(('sys',))
+        return (free_variables - SPEC_PER_LINE) | set(('sys',))
     elif free_variables & SPEC_LINE_GEN:
         # Create a stdin line generator.
         stdin_nodes = create_stdin_reader()
@@ -30,10 +30,11 @@ def handle_special_variables(tree: ast.AST, free_variables: set[str]) -> set[str
         # Wrap the last statement with print(...).
         wrap_last_statement_with_print(tree.body)
         tree.body = stdin_nodes + aliasing + tree.body
-        return free_variables - SPEC_LINE_GEN + set(('sys',))
+        return (free_variables - SPEC_LINE_GEN) | set(('sys',))
     else:
         # No special behavior required, just make sure to print the last statement.
         wrap_last_statement_with_print(tree.body)
+        return free_variables
 
 def set_variable_to_name(target_name: str, source_name: str) -> ast.AST:
     return ast.Assign(targets=[ast.Name(id=target_name, ctx=ast.Store())],
