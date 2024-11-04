@@ -15,6 +15,7 @@ def handle_special_variables(tree: ast.AST,
         aliasing = [set_variable_to_name(v, tmp_line_name)
                     for v in free_variables & SPEC_PER_LINE]
         wrap_last_statement_with_print(tree.body, pprint)
+        ast.increment_lineno(tree, stdin_nodes[-1].lineno)
         # Execute the code per line.
         for_node = ast.For(
             target = ast.Name(id=tmp_line_name, ctx=ast.Store()),
@@ -31,6 +32,7 @@ def handle_special_variables(tree: ast.AST,
                     for v in free_variables & SPEC_LINE_GEN]
         # Wrap the last statement with print(...).
         wrap_last_statement_with_print(tree.body, pprint)
+        ast.increment_lineno(tree, stdin_nodes[-1].lineno + len(aliasing))
         tree.body = stdin_nodes + aliasing + tree.body
         return (free_variables - SPEC_LINE_GEN) | set(('sys',))
     else:

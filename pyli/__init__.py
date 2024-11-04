@@ -39,4 +39,13 @@ def main(code: str,
         '<generated code>',  # filename
         'exec'               # Multiple statements.
     )
-    exec(bytecode)
+    # Since we're executing inside of main(), any imports are actually
+    # locals. Providing a globals dict prevents leaking any dev
+    # environment leaks, and is used as a locals, meaning that any
+    # "local" imports end up in the "globals" namespace.
+    # See https://stackoverflow.com/a/12505166
+    exec(
+        bytecode,
+        {} # Globals
+        # If not locals dict is given, globals=locals.
+    )
