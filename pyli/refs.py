@@ -34,7 +34,7 @@ def find_free_references(node: ast.AST) -> set:
     # Python keywords are consumed by parsing the ast, so there's no
     # need to worry about those.
     bound_vars, refs = find_all_references(node)
-    return refs - BUILTIN_NAMES - bound_vars
+    return (refs - BUILTIN_NAMES) - bound_vars
 
 def find_all_references(node: ast.AST) -> (set[str], set[str]):
     '''Recurse through an AST and find all the bound variables and references.'''
@@ -65,6 +65,9 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
         return find_multiple_node_references([node.left, node.right])
     elif isinstance(node, ast.BoolOp):
         return find_multiple_node_references(node.values)
+    elif isinstance(node, ast.Compare):
+        # Interestingly, this is not a BoolOp.
+        return find_multiple_node_references([node.left] + node.comparators)
     elif isinstance(node, ast.Call):
         return find_multiple_node_references(
             [node.func] + list(node.args) + [keyword.value for keyword in node.keywords])
@@ -151,7 +154,8 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
         # them deal with the runtime consequences of whatever they're
         # up to.
         if hasattr(node, 'value'):
-            return find_all_references(node.value)
+            node_bound_vars, refs = find_all_references(node.value)
+            return bound_vars | node_bound_vars, refs
         else:
             return bound_vars, set()
     elif isinstance(node, ast.NamedExpr):
@@ -202,7 +206,7 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
     # Fallback case.
     else:
         # TODO: transform this to a proper warning log.
-        print('Skipping {}'.format(node))
+        print('Skipping reference checking for {}'.format(node))
         return (set(), set())
 
 def find_multiple_node_references(nodes: list[ast.AST]) -> (set, set):
