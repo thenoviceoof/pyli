@@ -99,7 +99,10 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
     elif (isinstance(node, ast.Return) or
           isinstance(node, ast.Yield) or
           isinstance(node, ast.YieldFrom)):
-        return find_multiple_node_references(node.body)
+        if node.value:
+            return find_all_references(node.value)
+        else:
+            return set(), set()
     elif isinstance(node, ast.Await):
         return find_all_references(node.value)
     # Handle syntax that temporarily binds values.
@@ -131,13 +134,6 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
         # TODO
         return (set(), set())
     elif (sys.version_info >= (3, 10, 0) and isinstance(node, ast.Match)):
-        # TODO
-        return (set(), set())
-    elif (isinstance(node, ast.FunctionDef) or
-          isinstance(node, ast.AsyncFunctionDef)):
-        # TODO
-        return (set(), set())
-    elif isinstance(node, ast.Lambda):
         # TODO
         return (set(), set())
     elif isinstance(node, ast.ClassDef):
@@ -180,6 +176,19 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
         body_bindings, refs = find_multiple_node_references(
             [node.iter] + node.body + node.orelse)
         return target_refs | body_bindings, refs
+    elif (isinstance(node, ast.FunctionDef) or
+          isinstance(node, ast.AsyncFunctionDef)):
+        bound_vars, refs = find_multiple_node_references(
+            [node.args] + node.body + node.decorator_list)
+        return bound_vars | set(node.name), refs
+    elif isinstance(node, ast.Lambda):
+        return find_multiple_node_references([node.args, node.body])
+    elif isinstance(node, ast.arguments):
+        nodes = node.posonlyargs + node.args + node.kwonlyargs + \
+            [node.vararg] + [node.kwarg] + node.kw_defaults + node.defaults
+        return find_multiple_node_references([n for n in nodes if n])
+    elif isinstance(node, ast.arg):
+        return {node.arg}, set()
     # Explicitly don't do anything.
     elif (isinstance(node, ast.Constant) or
           isinstance(node, ast.Pass) or
