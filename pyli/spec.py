@@ -63,8 +63,8 @@ def ast_attr(parts: list[str], load: bool = False) -> ast.AST:
     if len(parts) == 1:
         return ast.Name(id=parts[0], ctx=ast.Load() if load else ast.Store())
     else:
-        return ast.Attribute(value=ast_attr(parts[1:], load),
-                             attr=parts[0],
+        return ast.Attribute(value=ast_attr(parts[:-1], load),
+                             attr=parts[-1],
                              ctx=ast.Load() if load else ast.Store())
 
 def wrap_last_statement_with_print(stmts: ast.AST, pprint: bool) -> None:
