@@ -4,6 +4,7 @@ PREFIX = 'PYLI_RESERVED_'
 
 SPEC_PER_LINE = set(('l', 'li', 'line'))
 SPEC_LINE_GEN = set(('ls', 'lis', 'lines'))
+SPEC_CONTENTS = set(('cs', 'conts', 'contents'))
 
 def handle_special_variables(tree: ast.AST,
                              free_variables: set[str],
@@ -35,6 +36,19 @@ def handle_special_variables(tree: ast.AST,
         ast.increment_lineno(tree, stdin_nodes[-1].lineno + len(aliasing))
         tree.body = stdin_nodes + aliasing + tree.body
         return (free_variables - SPEC_LINE_GEN) | set(('sys',))
+    elif free_variables & SPEC_CONTENTS:
+        # Create a stdin line generator.
+        stdin_node = ast.Assign(
+            targets=[ast.Name(id=PREFIX+'contents', ctx=ast.Store())],
+            value=ast.Call(func=ast_attr(('sys', 'stdin', 'read'), load=True),
+                           args=[], keywords=[]))
+        aliasing = [set_variable_to_name(v, PREFIX + 'contents')
+                    for v in free_variables & SPEC_CONTENTS]
+        # Wrap the last statement with print(...).
+        wrap_last_statement_with_print(tree.body, pprint)
+        ast.increment_lineno(tree, 1 + len(aliasing))
+        tree.body = [stdin_node] + aliasing + tree.body
+        return (free_variables - SPEC_CONTENTS) | set(('sys',))
     else:
         # No special behavior required, just make sure to print the last statement.
         wrap_last_statement_with_print(tree.body, pprint)
@@ -43,6 +57,15 @@ def handle_special_variables(tree: ast.AST,
 def set_variable_to_name(target_name: str, source_name: str) -> ast.AST:
     return ast.Assign(targets=[ast.Name(id=target_name, ctx=ast.Store())],
                       value=ast.Name(id=source_name, ctx=ast.Load()))
+
+def ast_attr(parts: list[str], load: bool = False) -> ast.AST:
+    '''Produce an AST representing a dot access chain.'''
+    if len(parts) == 1:
+        return ast.Name(id=parts[0], ctx=ast.Load() if load else ast.Store())
+    else:
+        return ast.Attribute(value=ast_attr(parts[1:], load),
+                             attr=parts[0],
+                             ctx=ast.Load() if load else ast.Store())
 
 def wrap_last_statement_with_print(stmts: ast.AST, pprint: bool) -> None:
     '''Given an AST body, wrap the "last" statement in a call to print(...).'''
