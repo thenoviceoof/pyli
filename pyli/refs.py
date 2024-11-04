@@ -121,10 +121,6 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
         bound_vars, node_refs = find_all_references(node.elt)
         refs.update(node_refs - local_binds)
         return bound_vars, refs
-    elif (isinstance(node, ast.For) or
-          isinstance(node, ast.AsyncFor)):
-        # TODO
-        return (set(), set())
     elif isinstance(node, ast.ExceptHandler):
         bound_vars, refs = find_multiple_node_references(node.body)
         if node.name is not None:
@@ -177,6 +173,13 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
         return find_multiple_node_references(node.names)
     elif isinstance(node, ast.alias):
         return {node.asname if node.asname else node.name}, set()
+    elif (isinstance(node, ast.For) or
+          isinstance(node, ast.AsyncFor)):
+        # Unlike generators, `for` bindings stick around afterwards.
+        _, target_refs = find_all_references(node.target)
+        body_bindings, refs = find_multiple_node_references(
+            [node.iter] + node.body + node.orelse)
+        return target_refs | body_bindings, refs
     # Explicitly don't do anything.
     elif (isinstance(node, ast.Constant) or
           isinstance(node, ast.Pass) or
