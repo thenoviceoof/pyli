@@ -67,6 +67,29 @@ def ast_attr(parts: list[str], load: bool = False) -> ast.AST:
                              attr=parts[-1],
                              ctx=ast.Load() if load else ast.Store())
 
+def create_print_ast(node: ast.AST, pprint: bool, location_node: ast.AST) -> list[ast.AST]:
+    '''Wraps a given AST node into a print pattern; don't print None.'''
+    # Assign the result of the node to a variable, since the node could have side effects.
+    tmp_var_name = PREFIX + 'tmp_print_holder'
+    assign_node = ast.Assign(targets=[ast.Name(id=tmp_var_name, ctx=ast.Store())],
+                             value=node)
+    print_expr = (
+        ast.Call(func=ast.Attribute(value=ast.Name(id='pprint', ctx=ast.Load()),
+                                    attr='pprint', ctx=ast.Load()),
+                 args=[ast.Name(id=tmp_var_name, ctx=ast.Load())], keywords=[])
+        if pprint else
+        ast.Call(func=ast.Name(id='print', ctx=ast.Load()),
+                 args=[ast.Name(id=tmp_var_name, ctx=ast.Load())], keywords=[])
+    )
+    none_check = ast.If(test=ast.Compare(left=ast.Name(id=tmp_var_name, ctx=ast.Load()),
+                                         ops=[ast.IsNot()],
+                                         comparators=[ast.Constant(value=None)]),
+                        body=[ast.Expr(value=print_expr)],
+                        orelse=[])
+    ast.copy_location(assign_node, location_node)
+    ast.copy_location(none_check, location_node)
+    return [assign_node, none_check]
+
 def wrap_last_statement_with_print(stmts: ast.AST, pprint: bool) -> None:
     '''Given an AST body, wrap the "last" statement in a call to print(...).'''
     last_node = stmts[-1]
@@ -77,15 +100,9 @@ def wrap_last_statement_with_print(stmts: ast.AST, pprint: bool) -> None:
         # If our given node is an Expr (statement-expression), unwrap
         # it before putting it into a print(...).
         # See https://stackoverflow.com/a/32429203
-        print_expr = (
-            ast.Expr(ast.Call(func=ast.Attribute(value=ast.Name(id='pprint', ctx=ast.Load()),
-                                                 attr='pprint', ctx=ast.Load()),
-                              args=[last_node.value], keywords=[]))
-            if pprint else
-            ast.Expr(ast.Call(func=ast.Name(id='print', ctx=ast.Load()),
-                              args=[last_node.value], keywords=[])))
-        ast.copy_location(print_expr, last_node)
-        stmts[-1] = print_expr
+        print_stmts = create_print_ast(last_node.value, pprint, last_node)
+        stmts.pop()
+        stmts.extend(print_stmts)
     elif (isinstance(last_node, ast.Assign) or
           isinstance(last_node, ast.AnnAssign) or
           isinstance(last_node, ast.AugAssign)):
@@ -106,10 +123,8 @@ def wrap_last_statement_with_print(stmts: ast.AST, pprint: bool) -> None:
                                ctx=ast.Load())
         else:
             raise AssertionError('Unhandled assignment type: {}'.format(last_node.targets[0]))
-        print_expr = ast.Expr(ast.Call(func=ast.Name(id='print', ctx=ast.Load()),
-                                       args=[target], keywords=[]))
-        ast.copy_location(print_expr, last_node)
-        stmts.append(print_expr)
+        print_stmts = create_print_ast(target, pprint, last_node)
+        stmts.extend(print_stmts)
     elif isinstance(last_node, ast.If):
         # That is disgusting, elif is represented extra If nodes.
         # Either way, we need to print the last statement of each
