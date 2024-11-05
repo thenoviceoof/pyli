@@ -8,7 +8,7 @@ def main(code: str,
          pprint_opt: bool = False,
          variables: dict = {}) -> None:
     # Set logging verbosity.
-    # TODO
+    # TODO: switch to logging.
 
     # Parse the code.
     tree = ast.parse(code)
@@ -26,6 +26,7 @@ def main(code: str,
     free_vars = handle_special_variables(tree, free_vars, pprint_opt)
 
     # Add variables passed in from the CLI.
+    # TODO: instead of setting variables this way, use the globals dict.
     set_intro_variables(tree, variables)
     free_vars -= set(variables.keys())
 

@@ -106,14 +106,12 @@ def wrap_last_statement_with_print(stmts: ast.AST, pprint: bool) -> None:
     elif (isinstance(last_node, ast.Assign) or
           isinstance(last_node, ast.AnnAssign) or
           isinstance(last_node, ast.AugAssign)):
-        # Why don't we just transform `x = 1` into `print(1)`?
-        # `x.a = 1` could potentially do weird things, by overriding __setattr__.
-        # Therefore, we only print the last reference.
-        #
-        # If there are multiple targets, we are parsing something like
-        # `a = b = 1`, and only need the first reference.
-        #
-        # If there is destructuring, we will get a ast.Tuple object to print.
+        # - Why don't we just transform `x = 1` into `print(1)`?
+        #   `x.a = 1` could potentially do weird things, by overriding __setattr__.
+        #   Therefore, we only print the last reference.
+        # - If there are multiple targets, we are parsing something like
+        #   `a = b = 1`, and only need the first reference.
+        # - If there is destructuring, we will get a ast.Tuple object to print.
         target = None
         if isinstance(last_node.targets[0], ast.Name):
             target = ast.Name(id=last_node.targets[0].id, ctx=ast.Load())

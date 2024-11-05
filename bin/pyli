@@ -27,6 +27,9 @@ from builtins import str
 import pyli
 import sys
 
+# Any sane person would use argparse; however, we want to accept
+# arbitrary switches, so unfortunately argparse is not an option.
+
 HELP_MSG = '''
 pyli is a utility to make using python in conjunction with other CLI tools easier
  - auto-imports

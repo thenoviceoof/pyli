@@ -27,6 +27,8 @@ import sys
 #    anywhere. List comprehensions are a nice shorthand, and we want
 #    to be able to overload, say, `l`.
 
+# TODO: handle importing children. For example, xml.etree.ElementTree requires importing the specific class.
+
 BUILTIN_NAMES = set(name for name in dir(builtins) if not name.startswith('_'))
 
 def find_free_references(node: ast.AST) -> set:
@@ -76,6 +78,7 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
     elif isinstance(node, ast.IfExp):
         return find_multiple_node_references([node.test, node.body, node.orelse])
     elif isinstance(node, ast.Attribute):
+        # TODO: THIS IS FALSE
         # I don't think it's possible to do shenanigans in the later parts of a dot reference.
         return find_all_references(node.value)
     elif isinstance(node, ast.Subscript):
@@ -147,6 +150,7 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
           isinstance(node, ast.AnnAssign) or
           isinstance(node, ast.AugAssign)):
         # TODO: Warn the user that something unexpected is if these are not all names.
+        # TODO: handle subscripts and attribute sets.
         bound_vars = {t.id for t in node.targets if isinstance(t, ast.Name)}
         # Type annotated assignments can omit an actual assignment.
         # We could treat this var as free, or raise an error, but
@@ -160,7 +164,7 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
             return bound_vars, set()
     elif isinstance(node, ast.NamedExpr):
         # Example: (x := 4) (walrus operator).
-        # TODO: warn if the target is not a plain Name.
+        assert isinstance(node.target, ast.Name), 'Walrus operator unexpectedly not assigning to a Name'
         name = node.target.id
         bound_vars, refs = find_all_references(node.value)
         return bound_vars | {name}, refs
@@ -169,9 +173,9 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
         return (set(), set([node.id]))
     elif (isinstance(node, ast.Import) or
           isinstance(node, ast.ImportFrom)):
-        # TODO
         return find_multiple_node_references(node.names)
     elif isinstance(node, ast.alias):
+        # TODO: handle dot-names.
         return {node.asname if node.asname else node.name}, set()
     elif (isinstance(node, ast.For) or
           isinstance(node, ast.AsyncFor)):
@@ -184,7 +188,7 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
           isinstance(node, ast.AsyncFunctionDef)):
         bound_vars, refs = find_multiple_node_references(
             [node.args] + node.body + node.decorator_list)
-        return bound_vars | set(node.name), refs
+        return bound_vars | {node.name}, refs
     elif isinstance(node, ast.Lambda):
         return find_multiple_node_references([node.args, node.body])
     elif isinstance(node, ast.arguments):
