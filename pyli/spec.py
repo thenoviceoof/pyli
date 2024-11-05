@@ -5,6 +5,7 @@ PREFIX = 'PYLI_RESERVED_'
 SPEC_PER_LINE = set(('l', 'li', 'line'))
 SPEC_LINE_GEN = set(('ls', 'lis', 'lines'))
 SPEC_CONTENTS = set(('cs', 'conts', 'contents'))
+SPEC_STD = set(('stdin', 'stdout', 'stderr'))
 
 def handle_special_variables(tree: ast.AST,
                              free_variables: set[str],
@@ -40,7 +41,7 @@ def handle_special_variables(tree: ast.AST,
         # Create a stdin line generator.
         stdin_node = ast.Assign(
             targets=[ast.Name(id=PREFIX+'contents', ctx=ast.Store())],
-            value=ast.Call(func=ast_attr(('sys', 'stdin', 'read'), load=True),
+            value=ast.Call(func=ast_attr(('sys', 'stdin', 'read')),
                            args=[], keywords=[]))
         aliasing = [set_variable_to_name(v, PREFIX + 'contents')
                     for v in free_variables & SPEC_CONTENTS]
@@ -49,16 +50,39 @@ def handle_special_variables(tree: ast.AST,
         ast.increment_lineno(tree, 1 + len(aliasing))
         tree.body = [stdin_node] + aliasing + tree.body
         return (free_variables - SPEC_CONTENTS) | set(('sys',))
+    elif free_variables & {'stdin', 'stdout', 'stderr'}:
+        aliasing = []
+        if 'stdin' in free_variables:
+            aliasing.append(set_variable_to_node('stdin',
+                                                 ast_attr(['sys', 'stdin'])))
+        if 'stdout' in free_variables:
+            aliasing.append(set_variable_to_node('stdout',
+                                                 ast_attr(['sys', 'stdout'])))
+        if 'stderr' in free_variables:
+            aliasing.append(set_variable_to_node('stderr',
+                                                 ast_attr(['sys', 'stderr'])))
+        for alias in aliasing:
+            ast.copy_location(alias, tree.body[0])
+        # If you're using stdout, you probably want only specific things going to stdout.
+        if 'stdout' not in free_variables:
+            wrap_last_statement_with_print(tree.body, pprint)
+        ast.increment_lineno(tree, 1 + len(aliasing))
+        tree.body = aliasing + tree.body
+        return (free_variables - {'stdin', 'stdout', 'stderr'}) | set(('sys',))
     else:
         # No special behavior required, just make sure to print the last statement.
         wrap_last_statement_with_print(tree.body, pprint)
         return free_variables
 
-def set_variable_to_name(target_name: str, source_name: str) -> ast.AST:
+def set_variable_to_node(target_name: str, source_node: ast.AST) -> ast.AST:
     return ast.Assign(targets=[ast.Name(id=target_name, ctx=ast.Store())],
-                      value=ast.Name(id=source_name, ctx=ast.Load()))
+                      value=source_node)
 
-def ast_attr(parts: list[str], load: bool = False) -> ast.AST:
+def set_variable_to_name(target_name: str, source_name: str) -> ast.AST:
+    return set_variable_to_node(target_name,
+                                ast.Name(id=source_name, ctx=ast.Load()))
+
+def ast_attr(parts: list[str], load: bool = True) -> ast.AST:
     '''Produce an AST representing a dot access chain.'''
     if len(parts) == 1:
         return ast.Name(id=parts[0], ctx=ast.Load() if load else ast.Store())

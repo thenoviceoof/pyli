@@ -211,9 +211,10 @@ y 2
 
     def test_stderr(self):
         with StdoutManager() as (stdin, stdout, stderr):
-            pyli.main("stderr.write('crap')")
-            assert stdout.getvalue() == '', stdout.getvalue()
-            assert stderr.getvalue() == 'crap', stderr.getvalue()
+            pyli.main("stderr.write('example')")
+            # The last line print prints the number of characters written.
+            assert stdout.getvalue() == '7\n', stdout.getvalue()
+            assert stderr.getvalue() == 'example', stderr.getvalue()
 
     # part/p
     def test_p_len(self):
