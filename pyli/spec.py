@@ -154,8 +154,8 @@ def wrap_last_statement_with_print(stmts: ast.AST, pprint: bool) -> None:
         # Raise or Assert, enough that I will not bother explicitly
         # listing them out.
         # In days of yore, we used to print function/class
-        # definitions, but upon reflection no one wants to see that.
-        raise ValueError('Unhandled last statement node type: {}.'.format(last_node))
+        # definitions, but upon reflection who would want to see that?
+        pass
 
 def is_ast_print(node: ast.AST) -> bool:
     '''Check if the given node represents a print(...) call.'''

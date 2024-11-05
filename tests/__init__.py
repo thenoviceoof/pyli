@@ -424,8 +424,7 @@ with open('setup.py') as f:
 def hello():
     return
 ''')
-            assert re.match(r'<function hello at 0x\w+>', stdout.getvalue()), \
-                stdout.getvalue()
+            assert stdout.getvalue() == '', stdout.getvalue()
 
     def test_end_class(self):
         with StdoutManager() as (stdin, stdout, stderr):
@@ -433,7 +432,7 @@ def hello():
 class hello():
     pass
 ''')
-            assert stdout.getvalue() == 'pyli.hello\n', stdout.getvalue()
+            assert stdout.getvalue() == '', stdout.getvalue()
 
     def test_end_decorator(self):
         with StdoutManager() as (stdin, stdout, stderr):
@@ -442,8 +441,7 @@ class hello():
 def hello():
     pass
 ''')
-            assert re.match(r'<functools.partial object at 0x\w+>',
-                            stdout.getvalue()), stdout.getvalue()
+            assert stdout.getvalue() == '', stdout.getvalue()
 
     # eventually someone's going to try it
     def test_end_import(self):
