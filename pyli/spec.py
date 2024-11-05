@@ -140,8 +140,15 @@ def wrap_last_statement_with_print(stmts: ast.AST, pprint: bool) -> None:
         else:
             wrap_last_statement_with_print(last_node.body, pprint)
     elif isinstance(last_node, ast.Try):
-        # TODO: don't edit the try block if the there's a finally or else.
-        wrap_last_statement_with_print(last_node.body, pprint)
+        if last_node.finalbody:
+            wrap_last_statement_with_print(last_node.finalbody, pprint)
+            # Finally always executes, so it is the definitive last statement.
+            return
+        if last_node.orelse:
+            # Else executes if no exceptions are handled.
+            wrap_last_statement_with_print(last_node.orelse, pprint)
+        else:
+            wrap_last_statement_with_print(last_node.body, pprint)
         # I think you could argue that we should not be printing
         # exception handlers, but the user is doing custom work they
         # might want printed.
