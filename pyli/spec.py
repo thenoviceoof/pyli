@@ -135,8 +135,10 @@ def wrap_last_statement_with_print(stmts: ast.AST, pprint: bool) -> None:
             wrap_last_statement_with_print(last_node.orelse, pprint)
     elif (isinstance(last_node, ast.For) or
           isinstance(last_node, ast.While)):
-        # TODO: unclear what exactly should happen here.
-        pass
+        if last_node.orelse:
+            wrap_last_statement_with_print(last_node.orelse, pprint)
+        else:
+            wrap_last_statement_with_print(last_node.body, pprint)
     elif isinstance(last_node, ast.Try):
         # TODO: don't edit the try block if the there's a finally or else.
         wrap_last_statement_with_print(last_node.body, pprint)
