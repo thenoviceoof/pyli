@@ -1,6 +1,6 @@
 import ast
 from pyli.refs import find_free_references
-from pyli.preamble import set_intro_variables, create_imports
+from pyli.preamble import create_imports
 from pyli.spec import handle_special_variables
 
 def main(code: str,
@@ -24,10 +24,7 @@ def main(code: str,
 
     # Handle any special variables and output on a case-by-case basis.
     free_vars = handle_special_variables(tree, free_vars, pprint_opt)
-
-    # Add variables passed in from the CLI.
-    # TODO: instead of setting variables this way, use the globals dict.
-    set_intro_variables(tree, variables)
+    # We will pass in command line variables via exec.
     free_vars -= set(variables.keys())
 
     # Add imports for the rest of the free variables.
@@ -47,6 +44,6 @@ def main(code: str,
     # See https://stackoverflow.com/a/12505166
     exec(
         bytecode,
-        {} # Globals
+        variables # Globals
         # If not locals dict is given, globals=locals.
     )
