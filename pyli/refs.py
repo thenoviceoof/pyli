@@ -142,9 +142,6 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
     elif (sys.version_info >= (3, 10, 0) and isinstance(node, ast.Match)):
         # TODO
         return (set(), set())
-    elif isinstance(node, ast.ClassDef):
-        # TODO
-        return (set(), set())
     # Handle actual binds.
     elif (isinstance(node, ast.Assign) or
           isinstance(node, ast.AnnAssign) or
@@ -197,6 +194,11 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
         return find_multiple_node_references([n for n in nodes if n])
     elif isinstance(node, ast.arg):
         return {node.arg}, set()
+    elif isinstance(node, ast.ClassDef):
+        # Keywords are not actually used anywhere (not real bindings), but the values can have refs.
+        bindings, refs = find_multiple_node_references(
+            node.bases + node.keywords + node.body + node.decorator_list)
+        return {node.name} | bindings, refs
     # Explicitly don't do anything.
     elif (isinstance(node, ast.Constant) or
           isinstance(node, ast.Pass) or
