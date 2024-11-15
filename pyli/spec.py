@@ -5,6 +5,8 @@ PREFIX = 'PYLI_RESERVED_'
 SPEC_PER_LINE = set(('l', 'li', 'line'))
 SPEC_LINE_GEN = set(('ls', 'lis', 'lines'))
 SPEC_CONTENTS = set(('cs', 'conts', 'contents'))
+SPEC_PER_PART = set(('p', 'part'))
+SPEC_PARTS_GEN = set(('ps', 'parts'))
 SPEC_STD = set(('stdin', 'stdout', 'stderr'))
 
 def handle_special_variables(tree: ast.AST,
@@ -12,7 +14,7 @@ def handle_special_variables(tree: ast.AST,
                              pprint: bool) -> set[str]:
     if free_variables & SPEC_PER_LINE:
         # Create a stdin line generator.
-        stdin_nodes = create_stdin_reader()
+        stdin_nodes = create_stdin_reader_lines()
         tmp_line_name = PREFIX + 'line'
         aliasing = [set_variable_to_name(v, tmp_line_name)
                     for v in free_variables & SPEC_PER_LINE]
@@ -29,7 +31,7 @@ def handle_special_variables(tree: ast.AST,
         return (free_variables - SPEC_PER_LINE) | set(('sys',))
     elif free_variables & SPEC_LINE_GEN:
         # Create a stdin line generator.
-        stdin_nodes = create_stdin_reader()
+        stdin_nodes = create_stdin_reader_lines()
         aliasing = [set_variable_to_name(v, PREFIX + 'lines')
                     for v in free_variables & SPEC_LINE_GEN]
         # Wrap the last statement with print(...).
@@ -50,6 +52,32 @@ def handle_special_variables(tree: ast.AST,
         ast.increment_lineno(tree, 1 + len(aliasing))
         tree.body = [stdin_node] + aliasing + tree.body
         return (free_variables - SPEC_CONTENTS) | set(('sys',))
+    elif free_variables & SPEC_PER_PART:
+        # Create a stdin space-delimited parts generator.
+        stdin_nodes = create_stdin_reader_parts()
+        # Wrap the last statement with print(...).
+        wrap_last_statement_with_print(tree.body, pprint)
+        aliasing = [set_variable_to_name(v, PREFIX + 'part')
+                    for v in free_variables & SPEC_PER_PART]
+        ast.increment_lineno(tree, 1 + stdin_nodes[-1].lineno + len(aliasing))
+        for_node = ast.For(
+            target = ast.Name(id=PREFIX + 'part', ctx=ast.Store()),
+            iter = ast.Name(id=PREFIX + 'parts', ctx=ast.Load()),
+            body = aliasing + tree.body,
+            orelse = []
+        )
+        tree.body = stdin_nodes + [for_node]
+        return (free_variables - SPEC_PER_PART) | set(('sys',))
+    elif free_variables & SPEC_PARTS_GEN:
+        # Create a stdin space-delimited parts generator.
+        stdin_nodes = create_stdin_reader_parts()
+        # Wrap the last statement with print(...).
+        wrap_last_statement_with_print(tree.body, pprint)
+        aliasing = [set_variable_to_name(v, PREFIX + 'parts')
+                    for v in free_variables & SPEC_PARTS_GEN]
+        ast.increment_lineno(tree, stdin_nodes[-1].lineno + len(aliasing))
+        tree.body = stdin_nodes + aliasing + tree.body
+        return (free_variables - SPEC_PARTS_GEN) | set(('sys',))
     elif free_variables & {'stdin', 'stdout', 'stderr'}:
         aliasing = []
         if 'stdin' in free_variables:
@@ -194,7 +222,7 @@ def is_ast_print(node: ast.AST) -> bool:
             isinstance(node.func, ast.Name) and
             node.func.id == 'print')
         
-def create_stdin_reader() -> list[ast.AST]:
+def create_stdin_reader_lines() -> list[ast.AST]:
     code = '''
 def {fn}():
     while True:
@@ -204,5 +232,18 @@ def {fn}():
         yield li.rstrip('\\n')
 {gen} = {fn}()
     '''.format(fn = PREFIX + 'line_generator', gen = PREFIX + 'lines')
+    tmp_tree = ast.parse(code)
+    return tmp_tree.body
+
+def create_stdin_reader_parts() -> list[ast.AST]:
+    code = '''
+def {fn}():
+    while True:
+        li = sys.stdin.readline()
+        if not li:
+            break
+        yield li.rstrip('\\n').split(' ')
+{gen} = {fn}()
+    '''.format(fn = PREFIX + 'parts_generator', gen = PREFIX + 'parts')
     tmp_tree = ast.parse(code)
     return tmp_tree.body
