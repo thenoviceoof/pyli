@@ -102,9 +102,9 @@ class TestPyli(unittest.TestCase):
 
     def test_calls(self):
         with StdoutManager() as (stdin, stdout, stderr):
-            pyli.main('pickle.dumps(json.loads(\'{"hello": "world"}\'))')
-            pickled = "(dp0\nVhello\np1\nVworld\np2\ns.\n"
-            assert stdout.getvalue() == pickled, stdout.getvalue()
+            pyli.main('html.escape(json.dumps({"hello": "world"}))')
+            result = '{&quot;hello&quot;: &quot;world&quot;}\n'
+            assert stdout.getvalue() == result, stdout.getvalue()
 
     def test_empty_list(self):
         with StdoutManager() as (stdin, stdout, stderr):
