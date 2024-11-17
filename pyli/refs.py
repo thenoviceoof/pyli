@@ -32,6 +32,7 @@ BUILTIN_NAMES = set((name,) for name in dir(builtins) if not name.startswith('_'
 
 def find_free_references(node: ast.AST) -> set[tuple[str]]:
     '''Recurse through an AST and find all the unbound references, without the builtins'''
+    # TODO: check `a = "..."; a.split()` does not have weird behavior.
     # Python keywords are consumed by parsing the ast, so there's no
     # need to worry about those.
     bound_vars, refs = find_all_references(node)

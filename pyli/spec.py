@@ -88,6 +88,7 @@ def handle_special_variables(tree: ast.AST,
             aliasing.append(set_variable_to_node('stdout',
                                                  ast_attr(['sys', 'stdout'])))
         if var_base_intersection(free_variables, {'stderr'}):
+            # TODO: Raise a warning if stderr is colliding with the debug flag.
             aliasing.append(set_variable_to_node('stderr',
                                                  ast_attr(['sys', 'stderr'])))
         for alias in aliasing:
