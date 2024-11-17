@@ -1,7 +1,10 @@
 import ast
 import builtins
+import logging
 import sys
 from collections.abc import Sequence
+
+LOG = logging.getLogger(__name__)
 
 # There are 2 possible approaches to doing reference handling. Consider this example:
 # `math.sqrt(2); math = 10`
@@ -32,10 +35,13 @@ BUILTIN_NAMES = set((name,) for name in dir(builtins) if not name.startswith('_'
 
 def find_free_references(node: ast.AST) -> set[tuple[str]]:
     '''Recurse through an AST and find all the unbound references, without the builtins'''
+    LOG.info('Looking for variables...')
     # TODO: check `a = "..."; a.split()` does not have weird behavior.
     # Python keywords are consumed by parsing the ast, so there's no
     # need to worry about those.
     bound_vars, refs = find_all_references(node)
+    LOG.debug('Found bound variables: {}'.format(bound_vars))
+    LOG.debug('Found references (including builtins): {}'.format(refs))
     return (refs - BUILTIN_NAMES) - bound_vars
 
 def find_all_references(node: ast.AST) -> (set[tuple[str]], set[tuple[str]]):

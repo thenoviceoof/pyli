@@ -1,5 +1,8 @@
 import ast
+import logging
 from collections.abc import Sequence
+
+LOG = logging.getLogger(__name__)
 
 PREFIX = 'PYLI_RESERVED_'
 
@@ -13,7 +16,9 @@ SPEC_STD = {'stdin', 'stdout', 'stderr'}
 def handle_special_variables(tree: ast.AST,
                              free_variables: set[tuple[str]],
                              pprint: bool) -> set[tuple[str]]:
+    LOG.info('Handling special variables...')
     if var_base_intersection(free_variables, SPEC_PER_LINE):
+        LOG.debug('Per-line variables detected')
         # Create a stdin line generator.
         stdin_nodes = create_stdin_reader_lines()
         tmp_line_name = PREFIX + 'line'
@@ -31,6 +36,7 @@ def handle_special_variables(tree: ast.AST,
         tree.body = stdin_nodes + [for_node]
         return var_base_difference(free_variables, SPEC_PER_LINE) | {('sys',)}
     elif var_base_intersection(free_variables, SPEC_LINE_GEN):
+        LOG.debug('Line generator variables detected')
         # Create a stdin line generator.
         stdin_nodes = create_stdin_reader_lines()
         aliasing = [set_variable_to_name(v, PREFIX + 'lines')
@@ -41,6 +47,7 @@ def handle_special_variables(tree: ast.AST,
         tree.body = stdin_nodes + aliasing + tree.body
         return var_base_difference(free_variables, SPEC_LINE_GEN) | {('sys',)}
     elif var_base_intersection(free_variables, SPEC_CONTENTS):
+        LOG.debug('Contents variables detected')
         # Create a stdin line generator.
         stdin_node = ast.Assign(
             targets=[ast.Name(id=PREFIX+'contents', ctx=ast.Store())],
@@ -54,6 +61,7 @@ def handle_special_variables(tree: ast.AST,
         tree.body = [stdin_node] + aliasing + tree.body
         return var_base_difference(free_variables, SPEC_CONTENTS) | {('sys',)}
     elif var_base_intersection(free_variables, SPEC_PER_PART):
+        LOG.debug('Space-delimited parts variables detected')
         # Create a stdin space-delimited parts generator.
         stdin_nodes = create_stdin_reader_parts()
         # Wrap the last statement with print(...).
@@ -70,6 +78,7 @@ def handle_special_variables(tree: ast.AST,
         tree.body = stdin_nodes + [for_node]
         return var_base_difference(free_variables, SPEC_PER_PART) | {('sys',)}
     elif var_base_intersection(free_variables, SPEC_PARTS_GEN):
+        LOG.debug('Space-delimited line generator detected')
         # Create a stdin space-delimited parts generator.
         stdin_nodes = create_stdin_reader_parts()
         # Wrap the last statement with print(...).
@@ -80,6 +89,7 @@ def handle_special_variables(tree: ast.AST,
         tree.body = stdin_nodes + aliasing + tree.body
         return var_base_difference(free_variables, SPEC_PARTS_GEN) | {('sys',)}
     elif var_base_intersection(free_variables, SPEC_STD):
+        LOG.debug('std* reference detected')
         aliasing = []
         if var_base_intersection(free_variables, {'stdin'}):
             aliasing.append(set_variable_to_node('stdin',
@@ -101,6 +111,7 @@ def handle_special_variables(tree: ast.AST,
         return var_base_difference(free_variables, SPEC_STD) | {('sys',)}
     else:
         # No special behavior required, just make sure to print the last statement.
+        LOG.debug('No special variable behavior detected')
         wrap_last_statement_with_print(tree.body, pprint)
         return free_variables
 

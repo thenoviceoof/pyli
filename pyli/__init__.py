@@ -2,23 +2,25 @@ import ast
 from pyli.refs import find_free_references
 from pyli.preamble import create_imports
 from pyli.spec import handle_special_variables
+import logging
+
+LOG = logging.getLogger(__name__)
 
 def main(code: str,
          debug: bool = False,
          pprint_opt: bool = False,
          variables: dict = {}) -> None:
     # Set logging verbosity.
-    # TODO: switch to logging.
+    logging.basicConfig(level=logging.DEBUG if debug else logging.WARNING)
 
     # Parse the code.
     tree = ast.parse(code)
-    if debug:
-        print(ast.dump(tree, indent=4))
+    LOG.debug('Initial parse tree...')
+    LOG.debug(ast.dump(tree, indent=4))
 
     # Find the free variables.
     free_vars = find_free_references(tree)
-    if debug:
-        print(free_vars)
+    LOG.debug('Free variables found: {}'.format(free_vars))
     if pprint_opt:
         free_vars.add(('pprint',))
 
@@ -33,6 +35,9 @@ def main(code: str,
 
     # Compile and execute the code.
     ast.fix_missing_locations(tree)
+    LOG.debug('Final parse tree...')
+    LOG.debug(ast.dump(tree, indent=4))
+    LOG.info('Compiling and executing code...')
     bytecode = compile(
         tree,
         '<generated code>',  # filename
