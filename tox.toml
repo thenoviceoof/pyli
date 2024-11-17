@@ -1,0 +1,7 @@
+requires = ["tox>=4"]
+env_list = ["3.11"]
+
+[env_run_base]
+description = "run unit tests"
+deps = []
+commands = [["python3", "-m", "unittest", { replace = "posargs", default = ["tests"], extend = true }]]
