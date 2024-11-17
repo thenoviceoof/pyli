@@ -1,23 +1,24 @@
 import ast
+from collections.abc import Sequence
 
 PREFIX = 'PYLI_RESERVED_'
 
-SPEC_PER_LINE = set(('l', 'li', 'line'))
-SPEC_LINE_GEN = set(('ls', 'lis', 'lines'))
-SPEC_CONTENTS = set(('cs', 'conts', 'contents'))
-SPEC_PER_PART = set(('p', 'part'))
-SPEC_PARTS_GEN = set(('ps', 'parts'))
-SPEC_STD = set(('stdin', 'stdout', 'stderr'))
+SPEC_PER_LINE = {'l', 'li', 'line'}
+SPEC_LINE_GEN = {'ls', 'lis', 'lines'}
+SPEC_CONTENTS = {'cs', 'conts', 'contents'}
+SPEC_PER_PART = {'p', 'part'}
+SPEC_PARTS_GEN = {'ps', 'parts'}
+SPEC_STD = {'stdin', 'stdout', 'stderr'}
 
 def handle_special_variables(tree: ast.AST,
-                             free_variables: set[str],
-                             pprint: bool) -> set[str]:
-    if free_variables & SPEC_PER_LINE:
+                             free_variables: set[tuple[str]],
+                             pprint: bool) -> set[tuple[str]]:
+    if var_base_intersection(free_variables, SPEC_PER_LINE):
         # Create a stdin line generator.
         stdin_nodes = create_stdin_reader_lines()
         tmp_line_name = PREFIX + 'line'
         aliasing = [set_variable_to_name(v, tmp_line_name)
-                    for v in free_variables & SPEC_PER_LINE]
+                    for v in var_base_intersection(free_variables, SPEC_PER_LINE)]
         wrap_last_statement_with_print(tree.body, pprint)
         ast.increment_lineno(tree, stdin_nodes[-1].lineno)
         # Execute the code per line.
@@ -28,37 +29,37 @@ def handle_special_variables(tree: ast.AST,
             orelse = []
         )
         tree.body = stdin_nodes + [for_node]
-        return (free_variables - SPEC_PER_LINE) | set(('sys',))
-    elif free_variables & SPEC_LINE_GEN:
+        return var_base_difference(free_variables, SPEC_PER_LINE) | {('sys',)}
+    elif var_base_intersection(free_variables, SPEC_LINE_GEN):
         # Create a stdin line generator.
         stdin_nodes = create_stdin_reader_lines()
         aliasing = [set_variable_to_name(v, PREFIX + 'lines')
-                    for v in free_variables & SPEC_LINE_GEN]
+                    for v in var_base_intersection(free_variables, SPEC_LINE_GEN)]
         # Wrap the last statement with print(...).
         wrap_last_statement_with_print(tree.body, pprint)
         ast.increment_lineno(tree, stdin_nodes[-1].lineno + len(aliasing))
         tree.body = stdin_nodes + aliasing + tree.body
-        return (free_variables - SPEC_LINE_GEN) | set(('sys',))
-    elif free_variables & SPEC_CONTENTS:
+        return var_base_difference(free_variables, SPEC_LINE_GEN) | {('sys',)}
+    elif var_base_intersection(free_variables, SPEC_CONTENTS):
         # Create a stdin line generator.
         stdin_node = ast.Assign(
             targets=[ast.Name(id=PREFIX+'contents', ctx=ast.Store())],
             value=ast.Call(func=ast_attr(('sys', 'stdin', 'read')),
                            args=[], keywords=[]))
         aliasing = [set_variable_to_name(v, PREFIX + 'contents')
-                    for v in free_variables & SPEC_CONTENTS]
+                    for v in var_base_intersection(free_variables, SPEC_CONTENTS)]
         # Wrap the last statement with print(...).
         wrap_last_statement_with_print(tree.body, pprint)
         ast.increment_lineno(tree, 1 + len(aliasing))
         tree.body = [stdin_node] + aliasing + tree.body
-        return (free_variables - SPEC_CONTENTS) | set(('sys',))
-    elif free_variables & SPEC_PER_PART:
+        return var_base_difference(free_variables, SPEC_CONTENTS) | {('sys',)}
+    elif var_base_intersection(free_variables, SPEC_PER_PART):
         # Create a stdin space-delimited parts generator.
         stdin_nodes = create_stdin_reader_parts()
         # Wrap the last statement with print(...).
         wrap_last_statement_with_print(tree.body, pprint)
         aliasing = [set_variable_to_name(v, PREFIX + 'part')
-                    for v in free_variables & SPEC_PER_PART]
+                    for v in var_base_intersection(free_variables, SPEC_PER_PART)]
         ast.increment_lineno(tree, 1 + stdin_nodes[-1].lineno + len(aliasing))
         for_node = ast.For(
             target = ast.Name(id=PREFIX + 'part', ctx=ast.Store()),
@@ -67,42 +68,42 @@ def handle_special_variables(tree: ast.AST,
             orelse = []
         )
         tree.body = stdin_nodes + [for_node]
-        return (free_variables - SPEC_PER_PART) | set(('sys',))
-    elif free_variables & SPEC_PARTS_GEN:
+        return var_base_difference(free_variables, SPEC_PER_PART) | {('sys',)}
+    elif var_base_intersection(free_variables, SPEC_PARTS_GEN):
         # Create a stdin space-delimited parts generator.
         stdin_nodes = create_stdin_reader_parts()
         # Wrap the last statement with print(...).
         wrap_last_statement_with_print(tree.body, pprint)
         aliasing = [set_variable_to_name(v, PREFIX + 'parts')
-                    for v in free_variables & SPEC_PARTS_GEN]
+                    for v in var_base_intersection(free_variables, SPEC_PARTS_GEN)]
         ast.increment_lineno(tree, stdin_nodes[-1].lineno + len(aliasing))
         tree.body = stdin_nodes + aliasing + tree.body
-        return (free_variables - SPEC_PARTS_GEN) | set(('sys',))
-    elif free_variables & {'stdin', 'stdout', 'stderr'}:
+        return var_base_difference(free_variables, SPEC_PARTS_GEN) | {('sys',)}
+    elif var_base_intersection(free_variables, SPEC_STD):
         aliasing = []
-        if 'stdin' in free_variables:
+        if var_base_intersection(free_variables, {'stdin'}):
             aliasing.append(set_variable_to_node('stdin',
                                                  ast_attr(['sys', 'stdin'])))
-        if 'stdout' in free_variables:
+        if var_base_intersection(free_variables, {'stdout'}):
             aliasing.append(set_variable_to_node('stdout',
                                                  ast_attr(['sys', 'stdout'])))
-        if 'stderr' in free_variables:
+        if var_base_intersection(free_variables, {'stderr'}):
             aliasing.append(set_variable_to_node('stderr',
                                                  ast_attr(['sys', 'stderr'])))
         for alias in aliasing:
             ast.copy_location(alias, tree.body[0])
         # If you're using stdout, you probably want only specific things going to stdout.
-        if 'stdout' not in free_variables:
+        if not var_base_intersection(free_variables, {'stdout'}):
             wrap_last_statement_with_print(tree.body, pprint)
         ast.increment_lineno(tree, 1 + len(aliasing))
         tree.body = aliasing + tree.body
-        return (free_variables - {'stdin', 'stdout', 'stderr'}) | set(('sys',))
+        return var_base_difference(free_variables, SPEC_STD) | {('sys',)}
     else:
         # No special behavior required, just make sure to print the last statement.
         wrap_last_statement_with_print(tree.body, pprint)
         return free_variables
 
-def set_variable_to_node(target_name: str, source_node: ast.AST) -> ast.AST:
+def set_variable_to_node(target_name: str, source_node: ast.expr) -> ast.AST:
     return ast.Assign(targets=[ast.Name(id=target_name, ctx=ast.Store())],
                       value=source_node)
 
@@ -110,7 +111,7 @@ def set_variable_to_name(target_name: str, source_name: str) -> ast.AST:
     return set_variable_to_node(target_name,
                                 ast.Name(id=source_name, ctx=ast.Load()))
 
-def ast_attr(parts: list[str], load: bool = True) -> ast.AST:
+def ast_attr(parts: Sequence[str], load: bool = True) -> ast.expr:
     '''Produce an AST representing a dot access chain.'''
     if len(parts) == 1:
         return ast.Name(id=parts[0], ctx=ast.Load() if load else ast.Store())
@@ -119,7 +120,7 @@ def ast_attr(parts: list[str], load: bool = True) -> ast.AST:
                              attr=parts[-1],
                              ctx=ast.Load() if load else ast.Store())
 
-def create_print_ast(node: ast.AST, pprint: bool, location_node: ast.AST) -> list[ast.AST]:
+def create_print_ast(node: ast.expr, pprint: bool, location_node: ast.AST) -> list[ast.AST]:
     '''Wraps a given AST node into a print pattern; don't print None.'''
     # Assign the result of the node to a variable, since the node could have side effects.
     tmp_var_name = PREFIX + 'tmp_print_holder'
@@ -142,7 +143,7 @@ def create_print_ast(node: ast.AST, pprint: bool, location_node: ast.AST) -> lis
     ast.copy_location(none_check, location_node)
     return [assign_node, none_check]
 
-def wrap_last_statement_with_print(stmts: ast.AST, pprint: bool) -> None:
+def wrap_last_statement_with_print(stmts: Sequence[ast.AST], pprint: bool) -> None:
     '''Given an AST body, wrap the "last" statement in a call to print(...).'''
     last_node = stmts[-1]
     if isinstance(last_node, ast.Expr):
@@ -222,7 +223,7 @@ def is_ast_print(node: ast.AST) -> bool:
             isinstance(node.func, ast.Name) and
             node.func.id == 'print')
         
-def create_stdin_reader_lines() -> list[ast.AST]:
+def create_stdin_reader_lines() -> Sequence[ast.AST]:
     code = '''
 def {fn}():
     while True:
@@ -235,7 +236,7 @@ def {fn}():
     tmp_tree = ast.parse(code)
     return tmp_tree.body
 
-def create_stdin_reader_parts() -> list[ast.AST]:
+def create_stdin_reader_parts() -> Sequence[ast.AST]:
     code = '''
 def {fn}():
     while True:
@@ -247,3 +248,17 @@ def {fn}():
     '''.format(fn = PREFIX + 'parts_generator', gen = PREFIX + 'parts')
     tmp_tree = ast.parse(code)
     return tmp_tree.body
+
+def var_base_intersection(vars_path: set[tuple[str]], vars_base: set[str]) -> set[str]:
+    '''
+    Check whether any variable paths share a common base reference.
+    This handles cases like `stdin.write` or `contents.split`.
+    '''
+    return vars_base & {v[0] for v in vars_path}
+
+def var_base_difference(vars_path: set[tuple[str]], vars_base: set[str]) -> set[tuple[str]]:
+    '''
+    Check whether any variable paths share a common base reference.
+    This handles cases like `stdin.write` or `contents.split`.
+    '''
+    return {v for v in vars_path if v[0] not in vars_base}

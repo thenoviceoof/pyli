@@ -20,12 +20,13 @@ def main(code: str,
     if debug:
         print(free_vars)
     if pprint_opt:
-        free_vars.add('pprint')
+        free_vars.add(('pprint',))
 
     # Handle any special variables and output on a case-by-case basis.
     free_vars = handle_special_variables(tree, free_vars, pprint_opt)
     # We will pass in command line variables via exec.
-    free_vars -= set(variables.keys())
+    # TODO: use var_base_difference.
+    free_vars -= {(k,) for k in variables.keys()}
 
     # Add imports for the rest of the free variables.
     create_imports(tree, free_vars)
@@ -37,6 +38,9 @@ def main(code: str,
         '<generated code>',  # filename
         'exec'               # Multiple statements.
     )
+    # Create a clean context, since test cases might leak the default
+    # arg dict across runs.
+    context = dict(**variables)
     # Since we're executing inside of main(), any imports are actually
     # locals. Providing a globals dict prevents leaking any dev
     # environment leaks, and is used as a locals, meaning that any
@@ -44,6 +48,6 @@ def main(code: str,
     # See https://stackoverflow.com/a/12505166
     exec(
         bytecode,
-        variables # Globals
+        context # Globals
         # If not locals dict is given, globals=locals.
     )

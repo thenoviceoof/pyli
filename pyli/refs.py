@@ -1,6 +1,7 @@
 import ast
 import builtins
 import sys
+from collections.abc import Sequence
 
 # There are 2 possible approaches to doing reference handling. Consider this example:
 # `math.sqrt(2); math = 10`
@@ -27,18 +28,16 @@ import sys
 #    anywhere. List comprehensions are a nice shorthand, and we want
 #    to be able to overload, say, `l`.
 
-# TODO: handle importing children. For example, xml.etree.ElementTree requires importing the specific class.
+BUILTIN_NAMES = set((name,) for name in dir(builtins) if not name.startswith('_'))
 
-BUILTIN_NAMES = set(name for name in dir(builtins) if not name.startswith('_'))
-
-def find_free_references(node: ast.AST) -> set:
+def find_free_references(node: ast.AST) -> set[tuple[str]]:
     '''Recurse through an AST and find all the unbound references, without the builtins'''
     # Python keywords are consumed by parsing the ast, so there's no
     # need to worry about those.
     bound_vars, refs = find_all_references(node)
     return (refs - BUILTIN_NAMES) - bound_vars
 
-def find_all_references(node: ast.AST) -> (set[str], set[str]):
+def find_all_references(node: ast.AST) -> (set[tuple[str]], set[tuple[str]]):
     '''Recurse through an AST and find all the bound variables and references.'''
     # Start by recursing past everything that doesn't deal directly with variables.
     # Nodes are ordered as in
@@ -78,8 +77,21 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
     elif isinstance(node, ast.IfExp):
         return find_multiple_node_references([node.test, node.body, node.orelse])
     elif isinstance(node, ast.Attribute):
-        # TODO: THIS IS FALSE
-        # I don't think it's possible to do shenanigans in the later parts of a dot reference.
+        # Check if this is a simple a.b.c reference. This does some
+        # duplicate work with long attribute chains, but it is trivial
+        # in the context of a CLI call.
+        unwrap = node
+        names = []
+        while isinstance(unwrap, ast.Attribute):
+            names.append(unwrap.attr)
+            unwrap = unwrap.value
+        if isinstance(unwrap, ast.Name):
+            names.append(unwrap.id)
+            return set(), {tuple(reversed(names))}
+        # It is not really possible to do unusual references with the
+        # `attr`; the ast of `a.b(...)` looks like Call(Attribute(...,
+        # attr='b'), args=...). It is not possible to do `a.(b+c)`,
+        # and `(a+b).b.c` should be automatically handled.
         return find_all_references(node.value)
     elif isinstance(node, ast.Subscript):
         return find_multiple_node_references([node.value, node.slice])
@@ -119,6 +131,7 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
         refs = set()
         local_binds = set()
         for gen in node.generators:
+            # TODO - fix list handling from this point.
             # Earlier generators can be used in later generators.
             _, iter_names = find_all_references(gen.target)
             local_binds.update(iter_names)
@@ -148,7 +161,7 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
           isinstance(node, ast.AugAssign)):
         # TODO: Warn the user that something unexpected is if these are not all names.
         # TODO: handle subscripts and attribute sets.
-        bound_vars = {t.id for t in node.targets if isinstance(t, ast.Name)}
+        bound_vars = {(t.id,) for t in node.targets if isinstance(t, ast.Name)}
         # Type annotated assignments can omit an actual assignment.
         # We could treat this var as free, or raise an error, but
         # instead of trying to guess the user's intent we just let
@@ -160,20 +173,22 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
         else:
             return bound_vars, set()
     elif isinstance(node, ast.NamedExpr):
-        # Example: (x := 4) (walrus operator).
+        # Example syntax: (x := 4) (walrus operator).
+        # Walrus disallowed with attributes, subscripts, or tuple
+        # unpacking (as of 3.11.2).
         assert isinstance(node.target, ast.Name), 'Walrus operator unexpectedly not assigning to a Name'
-        name = node.target.id
+        name = (node.target.id,)
         bound_vars, refs = find_all_references(node.value)
         return bound_vars | {name}, refs
     elif isinstance(node, ast.Name):
         # If we see a Name, and it isn't otherwise bound, it must be free.
-        return (set(), set([node.id]))
+        return (set(), {(node.id,)})
     elif (isinstance(node, ast.Import) or
           isinstance(node, ast.ImportFrom)):
         return find_multiple_node_references(node.names)
     elif isinstance(node, ast.alias):
         # TODO: handle dot-names.
-        return {node.asname if node.asname else node.name}, set()
+        return {(node.asname,) if node.asname else (node.name,)}, set()
     elif (isinstance(node, ast.For) or
           isinstance(node, ast.AsyncFor)):
         # Unlike generators, `for` bindings stick around afterwards.
@@ -193,12 +208,12 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
             [node.vararg] + [node.kwarg] + node.kw_defaults + node.defaults
         return find_multiple_node_references([n for n in nodes if n])
     elif isinstance(node, ast.arg):
-        return {node.arg}, set()
+        return {(node.arg,)}, set()
     elif isinstance(node, ast.ClassDef):
         # Keywords are not actually used anywhere (not real bindings), but the values can have refs.
         bindings, refs = find_multiple_node_references(
             node.bases + node.keywords + node.body + node.decorator_list)
-        return {node.name} | bindings, refs
+        return {(node.name,)} | bindings, refs
     # Explicitly don't do anything.
     elif (isinstance(node, ast.Constant) or
           isinstance(node, ast.Pass) or
@@ -215,7 +230,7 @@ def find_all_references(node: ast.AST) -> (set[str], set[str]):
         print('Skipping reference checking for {}'.format(node))
         return (set(), set())
 
-def find_multiple_node_references(nodes: list[ast.AST]) -> (set, set):
+def find_multiple_node_references(nodes: Sequence[ast.AST]) -> (set, set):
     '''Helper function to gather all reference types from a list of nodes.'''
     bound_vars = set()
     refs = set()
