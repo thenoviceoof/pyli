@@ -1,10 +1,16 @@
 requires = ["tox>=4"]
-env_list = ["type", "3.11"]
+env_list = ["autoformatter", "type", "3.11"]
 
 [env_run_base]
 description = "run unit tests"
 deps = []
 commands = [["python3", "-m", "unittest", { replace = "posargs", default = ["tests"], extend = true }]]
+
+[env.autoformatter]
+description = "run autoformatter"
+skip_install = true
+deps = ["black"]
+commands = [["black", { replace = "posargs", default = ["."], extend = true} ]]
 
 [env.type]
 description = "run type checks"
