@@ -120,9 +120,8 @@ def find_all_references(node: ast.AST) -> (set[str], set[tuple[str]]):
     elif isinstance(node, ast.Raise):
         return find_multiple_node_references([node.exc, node.cause])
     elif isinstance(node, ast.Delete):
-        # TODO: warn users that we don't handle deletes gracefully.
-        # For example: `math = 1; del math; math.exp(2)`
-        # We don't want to disallow `del`, since __delattr__ might do something significant.
+        # We don't want to disallow `del`, since __delattr__ might do
+        # something significant.
         return find_multiple_node_references(node.targets)
     elif isinstance(node, ast.If) or isinstance(node, ast.While):
         return find_multiple_node_references([node.test] + node.body + node.orelse)
@@ -231,8 +230,18 @@ def find_all_references(node: ast.AST) -> (set[str], set[tuple[str]]):
     elif isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom):
         return find_multiple_node_references(node.names)
     elif isinstance(node, ast.alias):
-        # TODO: handle dot-names.
-        return {node.asname if node.asname else node.name}, set()
+        if node.asname:
+            return {node.asname}, set()
+        else:
+            # This can lead to weird behavior: `import xml` will mask
+            # any reference to xml.etree.ElementTree and prevent it
+            # from being auto-imported.  Trying to work around this
+            # seems absurdly fiddly for a weird corner case, so I'm
+            # not going to do anything special about this.
+            # Note that the parser automatically handles relative
+            # imports so we don't need to do anything with munging
+            # away the leading period.
+            return {node.name.split(".")[0]}, set()
     elif isinstance(node, ast.For) or isinstance(node, ast.AsyncFor):
         # Unlike generators, `for` bindings stick around afterwards,
         # so definitely don't try to filter them out.

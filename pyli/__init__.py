@@ -2,6 +2,7 @@ import ast
 from pyli.refs import find_free_references
 from pyli.preamble import create_imports
 from pyli.spec import handle_special_variables
+from pyli.util import var_base_difference
 import logging
 
 LOG = logging.getLogger(__name__)
@@ -27,8 +28,7 @@ def main(
     # Handle any special variables and output on a case-by-case basis.
     free_vars = handle_special_variables(tree, free_vars, pprint_opt)
     # We will pass in command line variables via exec.
-    # TODO: use var_base_difference.
-    free_vars -= {(k,) for k in variables.keys()}
+    free_vars = var_base_difference(free_vars, {k for k in variables.keys()})
 
     # Add imports for the rest of the free variables.
     create_imports(tree, free_vars)

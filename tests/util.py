@@ -1,5 +1,6 @@
 # Exercise auto-import for more unusual language features.
 
+
 def ExampleClassDecorator(cls):
     setattr(cls, "hello", lambda self: "world")
     return cls

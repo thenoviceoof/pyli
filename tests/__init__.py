@@ -377,6 +377,11 @@ class TestAutoImport(unittest.TestCase):
             pyli.main("math.sqrt(4)")
             assert stdout.getvalue() == "2.0\n", stdout.getvalue()
 
+    def test_import_as(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main("import math as m; m.sqrt(4)")
+            assert stdout.getvalue() == "2.0\n", stdout.getvalue()
+
     def test_import_xml_child(self):
         with StdoutManager() as (stdin, stdout, stderr):
             pyli.main(
@@ -905,3 +910,8 @@ y 2
         with StdoutManager() as (stdin, stdout, stderr):
             pyli.main("print(x)", variables={"x": 'hello"'})
             assert stdout.getvalue() == 'hello"\n', stdout.getvalue()
+
+    def test_cli_switch_ref(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main("print(x.split()[1])", variables={"x": "hello world"})
+            assert stdout.getvalue() == "world\n", stdout.getvalue()
