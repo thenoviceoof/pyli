@@ -1,4 +1,6 @@
-def var_base_intersection(vars_path: set[tuple[str]], vars_base: set[str]) -> set[str]:
+def var_base_intersection(
+    vars_path: set[tuple[str, ...]], vars_base: set[str]
+) -> set[str]:
     """
     Check whether any variable paths share a common base reference.
     This handles cases like `stdin.write` or `contents.split`.
@@ -7,8 +9,8 @@ def var_base_intersection(vars_path: set[tuple[str]], vars_base: set[str]) -> se
 
 
 def var_base_difference(
-    vars_path: set[tuple[str]], vars_base: set[str]
-) -> set[tuple[str]]:
+    vars_path: set[tuple[str, ...]], vars_base: set[str]
+) -> set[tuple[str, ...]]:
     """
     Check whether any variable paths share a common base reference.
     This handles cases like `stdin.write` or `contents.split`.

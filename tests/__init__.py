@@ -683,7 +683,7 @@ fn()
             )
             assert stdout.getvalue() == "2.0\n", stdout.getvalue()
 
-    def test_function_body(self):
+    def test_function_args(self):
         with StdoutManager() as (stdin, stdout, stderr):
             pyli.main(
                 """

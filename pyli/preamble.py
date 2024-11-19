@@ -5,7 +5,7 @@ from collections.abc import Sequence
 LOG = logging.getLogger(__name__)
 
 
-def create_imports(tree: ast.AST, free_variables: set[tuple[str]]) -> None:
+def create_imports(tree: ast.AST, free_variables: set[tuple[str, ...]]) -> None:
     LOG.info("Creating imports...")
     assert isinstance(tree, ast.Module)
     for free_var in free_variables:

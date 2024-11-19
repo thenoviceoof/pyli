@@ -16,8 +16,8 @@ SPEC_STD = {"stdin", "stdout", "stderr"}
 
 
 def handle_special_variables(
-    tree: ast.AST, free_variables: set[tuple[str]], pprint: bool
-) -> set[tuple[str]]:
+    tree: ast.Module, free_variables: set[tuple[str, ...]], pprint: bool
+) -> set[tuple[str, ...]]:
     LOG.info("Handling special variables...")
     if var_base_intersection(free_variables, SPEC_PER_LINE):
         LOG.debug("Per-line variables detected")
@@ -126,13 +126,13 @@ def handle_special_variables(
         return free_variables
 
 
-def set_variable_to_node(target_name: str, source_node: ast.expr) -> ast.AST:
+def set_variable_to_node(target_name: str, source_node: ast.expr) -> ast.Assign:
     return ast.Assign(
         targets=[ast.Name(id=target_name, ctx=ast.Store())], value=source_node
     )
 
 
-def set_variable_to_name(target_name: str, source_name: str) -> ast.AST:
+def set_variable_to_name(target_name: str, source_name: str) -> ast.Assign:
     return set_variable_to_node(target_name, ast.Name(id=source_name, ctx=ast.Load()))
 
 
@@ -150,7 +150,7 @@ def ast_attr(parts: Sequence[str], load: bool = True) -> ast.expr:
 
 def create_print_ast(
     node: ast.expr, pprint: bool, location_node: ast.AST
-) -> list[ast.AST]:
+) -> list[ast.stmt]:
     """Wraps a given AST node into a print pattern; don't print None."""
     # Assign the result of the node to a variable, since the node could have side effects.
     tmp_var_name = PREFIX + "tmp_print_holder"
@@ -188,7 +188,7 @@ def create_print_ast(
     return [assign_node, none_check]
 
 
-def wrap_last_statement_with_print(stmts: Sequence[ast.AST], pprint: bool) -> None:
+def wrap_last_statement_with_print(stmts: list[ast.stmt], pprint: bool) -> None:
     """Given an AST body, wrap the "last" statement in a call to print(...)."""
     last_node = stmts[-1]
     if isinstance(last_node, ast.Expr):
@@ -274,7 +274,7 @@ def is_ast_print(node: ast.AST) -> bool:
     )
 
 
-def create_stdin_reader_lines() -> Sequence[ast.AST]:
+def create_stdin_reader_lines() -> list[ast.stmt]:
     code = """
 def {fn}():
     while True:
@@ -290,7 +290,7 @@ def {fn}():
     return tmp_tree.body
 
 
-def create_stdin_reader_parts() -> Sequence[ast.AST]:
+def create_stdin_reader_parts() -> list[ast.stmt]:
     code = """
 def {fn}():
     while True:
@@ -338,4 +338,8 @@ def set_assignment_target_context(
         return ast.Tuple(
             [set_assignment_target_context(elt, context) for elt in target.elts],
             context,
+        )
+    else:
+        raise ValueError(
+            "Unexpected node type found in assignment context: {}".format(target)
         )
