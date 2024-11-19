@@ -24,6 +24,7 @@ from __future__ import print_function
 from future import standard_library
 standard_library.install_aliases()
 from builtins import str
+import logging
 import pyli
 import sys
 
@@ -32,20 +33,24 @@ import sys
 
 HELP_MSG = '''
 pyli is a utility to make using python in conjunction with other CLI tools easier
- - auto-imports
- - populate variables (lines, line, contents) with stdin
+ - attempts to auto import unbound variables
+ - populate special variables (lines, line, contents) with structured
+   data from stdin
  - print the last line automatically (if not None)
- - adds command line options as variables (other than those listed below)
+ - provides command line options as variables (other than those listed
+   below)
 
 Special switches include:
- --debug         Outputs debug information useful when developing pyli
- --help          Outputs this message
- --pprint        Uses pprint.pprint() instead of python's builtin print
- --version       Outputs the current version of pyli
+ -v, -vv, --debug  Outputs debug information useful when developing pyli.
+ --help            Outputs this message.
+ -pp, --pprint     Uses pprint.pprint() instead of python's builtin print.
+ --version         Outputs the current version of pyli.
 
 Check out https://github.com/thenoviceoof/pyli for more details!
 '''
 
+# TODO: add a --debug-out switch to provide an alternative for debug
+# info than stderr.
 if __name__ == '__main__':
     if len(sys.argv) == 1 or '--help' in sys.argv:
         print(HELP_MSG.format(sys.argv[0]))
@@ -54,14 +59,23 @@ if __name__ == '__main__':
         print(version_string)
     else:
         args = sys.argv[1:]
-        debug = False
+        debug = logging.ERROR
         pprint = False
         # strip out any switches
+        if '-v' in args:
+            args.remove('-v')
+            debug = logging.WARNING
+        if '-vv' in args:
+            args.remove('-vv')
+            debug = logging.INFO
         if '--debug' in args:
             args.remove('--debug')
-            debug = True
+            debug = logging.DEBUG
         if '--pprint' in args:
             args.remove('--pprint')
+            pprint = True
+        if '-pp' in args:
+            args.remove('-pp')
             pprint = True
         # pass everything else as a variable
         commands = []

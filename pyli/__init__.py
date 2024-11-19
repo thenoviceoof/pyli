@@ -2,17 +2,21 @@ import ast
 from pyli.refs import find_free_references
 from pyli.preamble import create_imports
 from pyli.spec import handle_special_variables
-from pyli.util import var_base_difference
+from pyli.util import var_base_difference, var_base_intersection
 import logging
+import sys
 
 LOG = logging.getLogger(__name__)
 
 
 def main(
-    code: str, debug: bool = False, pprint_opt: bool = False, variables: dict = {}
+    code: str,
+    debug: int = logging.ERROR,
+    pprint_opt: bool = False,
+    variables: dict = {},
 ) -> None:
     # Set logging verbosity.
-    logging.basicConfig(level=logging.DEBUG if debug else logging.WARNING)
+    logging.basicConfig(level=debug)
 
     # Parse the code.
     tree = ast.parse(code)
@@ -24,6 +28,10 @@ def main(
     LOG.debug("Free variables found: {}".format(free_vars))
     if pprint_opt:
         free_vars.add(("pprint",))
+
+    if debug != logging.ERROR and var_base_intersection(free_vars, {"stderr"}):
+        LOG.error("Conflictng use of debug logging and writing to stderr.")
+        sys.exit(2)
 
     # Handle any special variables and output on a case-by-case basis.
     free_vars = handle_special_variables(tree, free_vars, pprint_opt)
