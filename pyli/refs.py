@@ -3,6 +3,7 @@ import builtins
 import logging
 import sys
 from collections.abc import Sequence
+from pyli.util import var_base_difference
 
 LOG = logging.getLogger(__name__)
 
@@ -31,22 +32,21 @@ LOG = logging.getLogger(__name__)
 #    anywhere. List comprehensions are a nice shorthand, and we want
 #    to be able to overload, say, `l`.
 
-BUILTIN_NAMES = set((name,) for name in dir(builtins) if not name.startswith("_"))
+BUILTIN_NAMES = set(name for name in dir(builtins) if not name.startswith("_"))
 
 
 def find_free_references(node: ast.AST) -> set[tuple[str]]:
     """Recurse through an AST and find all the unbound references, without the builtins"""
     LOG.info("Looking for variables...")
-    # TODO: check `a = "..."; a.split()` does not have weird behavior.
     # Python keywords are consumed by parsing the ast, so there's no
     # need to worry about those.
     bound_vars, refs = find_all_references(node)
     LOG.debug("Found bound variables: {}".format(bound_vars))
     LOG.debug("Found references (including builtins): {}".format(refs))
-    return (refs - BUILTIN_NAMES) - bound_vars
+    return var_base_difference(var_base_difference(refs, BUILTIN_NAMES), bound_vars)
 
 
-def find_all_references(node: ast.AST) -> (set[tuple[str]], set[tuple[str]]):
+def find_all_references(node: ast.AST) -> (set[str], set[tuple[str]]):
     """Recurse through an AST and find all the bound variables and references."""
     # Start by recursing past everything that doesn't deal directly with variables.
     # Nodes are ordered as in
@@ -109,7 +109,11 @@ def find_all_references(node: ast.AST) -> (set[tuple[str]], set[tuple[str]]):
     elif isinstance(node, ast.Subscript):
         return find_multiple_node_references([node.value, node.slice])
     elif isinstance(node, ast.Slice):
-        nodes = [node.lower, node.upper]
+        nodes = []
+        if node.lower:
+            nodes.append(node.lower)
+        if node.upper:
+            nodes.append(node.upper)
         if node.step:
             nodes.append(node.step)
         return find_multiple_node_references(nodes)
@@ -146,29 +150,48 @@ def find_all_references(node: ast.AST) -> (set[tuple[str]], set[tuple[str]]):
         or isinstance(node, ast.GeneratorExp)
         or isinstance(node, ast.DictComp)
     ):
-        refs = set()
         local_binds = set()
+        bound_vars = set()
+        refs = set()
+        # Earlier generators can be used in later generators.
         for gen in node.generators:
-            # TODO - fix list handling from this point.
-            # Earlier generators can be used in later generators.
-            _, iter_names = find_all_references(gen.target)
-            local_binds.update(iter_names)
+            target_binds, target_refs = find_assignment_lhs_references([gen.target])
+            local_binds.update(target_binds)
             # Inline assignments cannot be used in iterables, so we
             # don't have to worry about a more permanent bind
             # overwriting the temporary one.
-            _, node_refs = find_all_references(gen.iter)
-            refs.update(node_refs - local_binds)
-        bound_vars, node_refs = find_all_references(node.elt)
-        refs.update(node_refs - local_binds)
+            iter_binds, iter_refs = find_all_references(gen.iter)
+            assert len(iter_binds) == 0
+            if_binds, if_refs = find_multiple_node_references(gen.ifs)
+            bound_vars.update(if_binds)
+            refs.update(
+                var_base_difference(target_refs | iter_refs | if_refs, local_binds)
+            )
+        elt_binds, elt_refs = (
+            find_multiple_node_references([node.key, node.value])
+            if isinstance(node, ast.DictComp)
+            else find_all_references(node.elt)
+        )
+        bound_vars.update(elt_binds)
+        refs.update(var_base_difference(elt_refs, local_binds))
         return bound_vars, refs
     elif isinstance(node, ast.ExceptHandler):
         bound_vars, refs = find_multiple_node_references(node.body)
         if node.name is not None:
-            refs.remove(node.name)
+            refs = var_base_difference(refs, {node.name})
         return bound_vars, refs
     elif isinstance(node, ast.With) or isinstance(node, ast.AsyncWith):
-        # TODO
-        return (set(), set())
+        binds, refs = find_multiple_node_references(node.body)
+        # Assignment via with persists beyond the block.
+        for item in node.items:
+            assert isinstance(item, ast.withitem)
+            as_binds, as_refs = find_assignment_lhs_references([item.optional_vars])
+            binds.update(as_binds)
+            refs.update(as_refs)
+            ctx_binds, ctx_refs = find_all_references(item.context_expr)
+            binds.update(ctx_binds)
+            refs.update(ctx_refs)
+        return binds, refs
     elif sys.version_info >= (3, 10, 0) and isinstance(node, ast.Match):
         # TODO
         return (set(), set())
@@ -178,29 +201,30 @@ def find_all_references(node: ast.AST) -> (set[tuple[str]], set[tuple[str]]):
         or isinstance(node, ast.AnnAssign)
         or isinstance(node, ast.AugAssign)
     ):
-        # TODO: Warn the user that something unexpected is if these are not all names.
-        # TODO: handle subscripts and attribute sets.
-        bound_vars = {(t.id,) for t in node.targets if isinstance(t, ast.Name)}
+        targets = []
+        if isinstance(node, ast.Assign):
+            targets = node.targets
+        else:
+            targets = [node.target]
+        bound_vars, lhs_refs = find_assignment_lhs_references(targets)
         # Type annotated assignments can omit an actual assignment.
         # We could treat this var as free, or raise an error, but
         # instead of trying to guess the user's intent we just let
         # them deal with the runtime consequences of whatever they're
         # up to.
         if hasattr(node, "value"):
-            node_bound_vars, refs = find_all_references(node.value)
-            return bound_vars | node_bound_vars, refs
+            rhs_bound_vars, rhs_refs = find_all_references(node.value)
+            return bound_vars | rhs_bound_vars, lhs_refs | rhs_refs
         else:
-            return bound_vars, set()
+            return bound_vars, lhs_refs
     elif isinstance(node, ast.NamedExpr):
-        # Example syntax: (x := 4) (walrus operator).
-        # Walrus disallowed with attributes, subscripts, or tuple
-        # unpacking (as of 3.11.2).
-        assert isinstance(
-            node.target, ast.Name
-        ), "Walrus operator unexpectedly not assigning to a Name"
-        name = (node.target.id,)
-        bound_vars, refs = find_all_references(node.value)
-        return bound_vars | {name}, refs
+        # Example syntax: (x := 4) (walrus operator).  Walrus
+        # disallowed with attributes, subscripts, or tuple unpacking
+        # (as of 3.11.2), but treat it as a general assignment LHS,
+        # just in case.
+        lhs_bound_vars, lhs_refs = find_assignment_lhs_references([node.target])
+        rhs_bound_vars, rhs_refs = find_all_references(node.value)
+        return lhs_bound_vars | rhs_bound_vars, lhs_refs | rhs_refs
     elif isinstance(node, ast.Name):
         # If we see a Name, and it isn't otherwise bound, it must be free.
         return (set(), {(node.id,)})
@@ -208,14 +232,17 @@ def find_all_references(node: ast.AST) -> (set[tuple[str]], set[tuple[str]]):
         return find_multiple_node_references(node.names)
     elif isinstance(node, ast.alias):
         # TODO: handle dot-names.
-        return {(node.asname,) if node.asname else (node.name,)}, set()
+        return {node.asname if node.asname else node.name}, set()
     elif isinstance(node, ast.For) or isinstance(node, ast.AsyncFor):
-        # Unlike generators, `for` bindings stick around afterwards.
-        _, target_refs = find_all_references(node.target)
-        body_bindings, refs = find_multiple_node_references(
+        # Unlike generators, `for` bindings stick around afterwards,
+        # so definitely don't try to filter them out.
+        # You can do things like `for math.x in range(2):`, so re-use
+        # normal assignment logic.
+        target_bindings, target_refs = find_assignment_lhs_references([node.target])
+        body_bindings, body_refs = find_multiple_node_references(
             [node.iter] + node.body + node.orelse
         )
-        return target_refs | body_bindings, refs
+        return target_bindings | body_bindings, target_refs | body_refs
     elif isinstance(node, ast.FunctionDef) or isinstance(node, ast.AsyncFunctionDef):
         bound_vars, refs = find_multiple_node_references(
             [node.args] + node.body + node.decorator_list
@@ -235,13 +262,16 @@ def find_all_references(node: ast.AST) -> (set[tuple[str]], set[tuple[str]]):
         )
         return find_multiple_node_references([n for n in nodes if n])
     elif isinstance(node, ast.arg):
-        return {(node.arg,)}, set()
+        return {node.arg}, set()
+    elif isinstance(node, ast.keyword):
+        binds, refs = find_all_references(node.value)
+        return binds | {node.arg}, refs
     elif isinstance(node, ast.ClassDef):
         # Keywords are not actually used anywhere (not real bindings), but the values can have refs.
         bindings, refs = find_multiple_node_references(
             node.bases + node.keywords + node.body + node.decorator_list
         )
-        return {(node.name,)} | bindings, refs
+        return {node.name} | bindings, refs
     # Explicitly don't do anything.
     elif (
         isinstance(node, ast.Constant)
@@ -257,12 +287,13 @@ def find_all_references(node: ast.AST) -> (set[tuple[str]], set[tuple[str]]):
         return set(), set()
     # Fallback case.
     else:
-        # TODO: transform this to a proper warning log.
-        print("Skipping reference checking for {}".format(node))
+        LOG.warning("Skipping reference checking for {}".format(node))
         return (set(), set())
 
 
-def find_multiple_node_references(nodes: Sequence[ast.AST]) -> (set, set):
+def find_multiple_node_references(
+    nodes: Sequence[ast.AST],
+) -> (set[str], set[tuple[str]]):
     """Helper function to gather all reference types from a list of nodes."""
     bound_vars = set()
     refs = set()
@@ -271,3 +302,25 @@ def find_multiple_node_references(nodes: Sequence[ast.AST]) -> (set, set):
         bound_vars.update(node_bound_vars)
         refs.update(node_refs)
     return bound_vars, refs
+
+
+def find_assignment_lhs_references(
+    targets: Sequence[ast.expr],
+) -> (set[str], set[tuple[str]]):
+    bound_vars = set()
+    lhs_refs = set()
+    for t in targets:
+        if isinstance(t, ast.Name):
+            bound_vars.add(t.id)
+        elif isinstance(t, ast.Tuple) or isinstance(t, ast.List):
+            tmp_binds, tmp_refs = find_assignment_lhs_references(t.elts)
+            bound_vars.update(tmp_binds)
+            lhs_refs.update(tmp_refs)
+        else:
+            # Anything that is not a plain name is actually a reference.
+            # Think `module.flag = 1`.
+            tmp_bound_vars, tmp_refs = find_all_references(t)
+            # Defend against := showing up in the LHS.
+            assert len(tmp_bound_vars) == 0
+            lhs_refs.update(tmp_refs)
+    return bound_vars, lhs_refs

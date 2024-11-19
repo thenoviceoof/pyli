@@ -18,7 +18,6 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-from builtins import object
 import pyli
 import io
 import sys
@@ -26,7 +25,7 @@ import re
 import unittest
 
 
-class StdoutManager(object):
+class StdoutManager:
     """
     Temporarily replace std* streams with StringIO objects.
     """
@@ -358,6 +357,11 @@ import math
             pyli.main("y = 1; 1 + (y := y + 1)")
             assert stdout.getvalue() == "3\n", stdout.getvalue()
 
+    def test_assign_destructuring(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main("x, y = [1, 2]")
+            assert stdout.getvalue() == "(1, 2)\n", stdout.getvalue()
+
 
 class TestAutoImport(unittest.TestCase):
     def tearDown(self):
@@ -505,7 +509,7 @@ except Exception:
             )
             assert stdout.getvalue() == "2.0\n", stdout.getvalue()
 
-    def test_try_body(self):
+    def test_try_except(self):
         with StdoutManager() as (stdin, stdout, stderr):
             pyli.main(
                 """
@@ -517,7 +521,7 @@ except Exception:
             )
             assert stdout.getvalue() == "2.0\n", stdout.getvalue()
 
-    def test_try_except_match(self):
+    def test_try_except_catch(self):
         with StdoutManager() as (stdin, stdout, stderr):
             pyli.main(
                 """
@@ -529,7 +533,7 @@ except pickle.PickleError:
             )
             assert stdout.getvalue() == "1\n", stdout.getvalue()
 
-    def test_try_except_match(self):
+    def test_try_except_catch_as(self):
         with StdoutManager() as (stdin, stdout, stderr):
             pyli.main(
                 """
@@ -581,16 +585,30 @@ finally:
             pyli.main("[i for i in range(int(math.sqrt(4)))]")
             assert stdout.getvalue() == "[0, 1]\n", stdout.getvalue()
 
-    def test_list_comp_iter(self):
+    def test_list_comp_if(self):
         with StdoutManager() as (stdin, stdout, stderr):
-            pyli.main("[i for i in range(4) if math.sqrt(2*i) < 2.5]")
+            pyli.main("[i for i in range(4) if math.sqrt(3*i) < 2.5]")
             assert stdout.getvalue() == "[0, 1, 2]\n", stdout.getvalue()
 
-    def test_with_body(self):
-        # TODO
+    def test_with_item_assigned(self):
         with StdoutManager() as (stdin, stdout, stderr):
-            pyli.main("")
-            assert stdout.getvalue() == "[0, 1, 2]\n", stdout.getvalue()
+            pyli.main(
+                """
+with tests.util.ExampleContextManager() as x:
+  x
+            """
+            )
+            assert stdout.getvalue() == "hello world\n", stdout.getvalue()
+
+    def test_with(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main(
+                """
+with contextlib.nullcontext():
+  math.sqrt(4)
+            """
+            )
+            assert stdout.getvalue() == "2.0\n", stdout.getvalue()
 
     def test_assign(self):
         with StdoutManager() as (stdin, stdout, stderr):
@@ -675,7 +693,7 @@ fn()
         with StdoutManager() as (stdin, stdout, stderr):
             pyli.main(
                 """
-@functool.cache
+@functools.cache
 def fn():
   return 1
 fn()
@@ -706,29 +724,28 @@ class A(random.Random):
             )
             assert stdout.getvalue() == "True\n", stdout.getvalue()
 
-    # TODO
     def test_class_keywords(self):
         with StdoutManager() as (stdin, stdout, stderr):
             pyli.main(
                 """
-class A():
+class A(metaclass=tests.util.ExampleMetaclass):
   pass
-A()
+A().hello()
             """
             )
-            assert stdout.getvalue() == "\n", stdout.getvalue()
+            assert stdout.getvalue() == "world\n", stdout.getvalue()
 
-    # TODO
     def test_class_decorators(self):
         with StdoutManager() as (stdin, stdout, stderr):
             pyli.main(
                 """
+@tests.util.ExampleClassDecorator
 class A():
   pass
-A()
+A().hello()
             """
             )
-            assert stdout.getvalue() == "\n", stdout.getvalue()
+            assert stdout.getvalue() == "world\n", stdout.getvalue()
 
     def test_bound_variables_with_attributes(self):
         # This should NOT be treated as an import.

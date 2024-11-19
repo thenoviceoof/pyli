@@ -1,6 +1,7 @@
 import ast
 import logging
 from collections.abc import Sequence
+from pyli.util import var_base_intersection, var_base_difference
 
 LOG = logging.getLogger(__name__)
 
@@ -206,27 +207,22 @@ def wrap_last_statement_with_print(stmts: Sequence[ast.AST], pprint: bool) -> No
         or isinstance(last_node, ast.AnnAssign)
         or isinstance(last_node, ast.AugAssign)
     ):
+        # If there's no actual assignment, then there's nothing to print.
+        if not hasattr(last_node, "value"):
+            return
         # - Why don't we just transform `x = 1` into `print(1)`?
         #   `x.a = 1` could potentially do weird things, by overriding __setattr__.
+        #   Additionally, the rhs might be non-idempotent.
         #   Therefore, we only print the last reference.
         # - If there are multiple targets, we are parsing something like
         #   `a = b = 1`, and only need the first reference.
         # - If there is destructuring, we will get a ast.Tuple object to print.
         target = None
-        if isinstance(last_node.targets[0], ast.Name):
-            target = ast.Name(id=last_node.targets[0].id, ctx=ast.Load())
-        elif isinstance(last_node.targets[0], ast.Tuple):
-            target = ast.Tuple(
-                elts=[
-                    ast.Name(id=var.id, ctx=ast.Load())
-                    for var in last_node.targets[0].elts
-                ],
-                ctx=ast.Load(),
-            )
+        if isinstance(last_node, ast.Assign):
+            target = last_node.targets[0]
         else:
-            raise AssertionError(
-                "Unhandled assignment type: {}".format(last_node.targets[0])
-            )
+            target = last_node.target
+        target = set_assignment_target_context(target, ast.Load())
         print_stmts = create_print_ast(target, pprint, last_node)
         stmts.extend(print_stmts)
     elif isinstance(last_node, ast.If):
@@ -311,19 +307,36 @@ def {fn}():
     return tmp_tree.body
 
 
-def var_base_intersection(vars_path: set[tuple[str]], vars_base: set[str]) -> set[str]:
+def set_assignment_target_context(
+    target: ast.expr, context: ast.expr_context
+) -> ast.expr:
     """
-    Check whether any variable paths share a common base reference.
-    This handles cases like `stdin.write` or `contents.split`.
+    Iterate through an assignment target and switch
     """
-    return vars_base & {v[0] for v in vars_path}
-
-
-def var_base_difference(
-    vars_path: set[tuple[str]], vars_base: set[str]
-) -> set[tuple[str]]:
-    """
-    Check whether any variable paths share a common base reference.
-    This handles cases like `stdin.write` or `contents.split`.
-    """
-    return {v for v in vars_path if v[0] not in vars_base}
+    # Thankfully, there is a limited number of ast nodes involved in assignment.
+    if isinstance(target, ast.Attribute):
+        return ast.Attribute(
+            set_assignment_target_context(target.value, context), target.attr, context
+        )
+    elif isinstance(target, ast.Subscript):
+        return ast.Subscript(
+            set_assignment_target_context(target.value, context),
+            set_assignment_target_context(target.slice, context),
+            context,
+        )
+    elif isinstance(target, ast.Starred):
+        return ast.Starred(
+            set_assignment_target_context(target.value, context), context
+        )
+    elif isinstance(target, ast.Name):
+        return ast.Name(target.id, context)
+    elif isinstance(target, ast.List):
+        return ast.List(
+            [set_assignment_target_context(elt, context) for elt in target.elts],
+            context,
+        )
+    elif isinstance(target, ast.Tuple):
+        return ast.Tuple(
+            [set_assignment_target_context(elt, context) for elt in target.elts],
+            context,
+        )
