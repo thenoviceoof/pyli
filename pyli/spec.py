@@ -255,7 +255,10 @@ def wrap_last_statement_with_print(stmts: list[ast.stmt], pprint: bool) -> None:
             wrap_last_statement_with_print(handler.body, pprint)
     elif isinstance(last_node, ast.With):
         wrap_last_statement_with_print(last_node.body, pprint)
-    # TODO: handle `match`.
+    elif isinstance(last_node, ast.Match):
+        for case in last_node.cases:
+            assert isinstance(case, ast.match_case)
+            wrap_last_statement_with_print(case.body, pprint)
     else:
         # There are many statements that shouldn't be printed, like
         # Raise or Assert, enough that I will not bother explicitly

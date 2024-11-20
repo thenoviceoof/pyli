@@ -286,6 +286,19 @@ with open('setup.py') as f:
             )
             assert stdout.getvalue() == "pony times\n", stdout.getvalue()
 
+    def test_match(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main(
+                """
+match 1:
+  case 1:
+    2
+  case 2:
+    1
+            """
+            )
+            assert stdout.getvalue() == "2\n", stdout.getvalue()
+
     def test_pprint(self):
         output = """{0: 'thing',
  1: 'thing',
