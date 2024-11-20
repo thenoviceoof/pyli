@@ -198,8 +198,17 @@ def find_all_references(node: ast.AST) -> tuple[set[str], set[tuple[str, ...]]]:
             refs.update(ctx_refs)
         return binds, refs
     elif sys.version_info >= (3, 10, 0) and isinstance(node, ast.Match):  # type: ignore
-        # TODO
-        return (set(), set())
+        # Extracted components are persistent.
+        match_nodes = [node.subject] + node.cases
+        return find_multiple_node_references(match_nodes)
+    elif isinstance(node, ast.match_case):
+        case_binds, case_refs = find_match_case_references(node.pattern)
+        match_case_nodes: list[ast.AST] = []
+        if node.guard:
+            match_case_nodes.append(node.guard)
+        match_case_nodes.extend(node.body)
+        binds, refs = find_multiple_node_references(match_case_nodes)
+        return binds | case_binds, refs | case_refs
     # Handle actual binds.
     elif (
         isinstance(node, ast.Assign)
@@ -319,6 +328,9 @@ def find_multiple_node_references(
 def find_assignment_lhs_references(
     targets: Sequence[ast.expr],
 ) -> tuple[set[str], set[tuple[str, ...]]]:
+    """Only a subset of ast nodes are allowed on the LHS of an
+    assignment, and names are bindings instead of free variables.
+    """
     bound_vars = set()
     lhs_refs = set()
     for t in targets:
@@ -336,3 +348,60 @@ def find_assignment_lhs_references(
             assert len(tmp_bound_vars) == 0
             lhs_refs.update(tmp_refs)
     return bound_vars, lhs_refs
+
+
+def find_match_case_references(
+    target: ast.pattern,
+) -> tuple[set[str], set[tuple[str, ...]]]:
+    """Find variables assignments within match case statements."""
+    binds = set()
+    refs = set()
+    if isinstance(target, ast.MatchValue):
+        # This can match attributes like `x.a`, so we should use the
+        # usual LHS rules.
+        value_binds, value_refs = find_assignment_lhs_references([target.value])
+        binds |= value_binds
+        refs |= value_refs
+    elif isinstance(target, ast.MatchSingleton):
+        # Used for True/False/None.
+        pass
+    elif isinstance(target, ast.MatchSequence):
+        find_multiple_match_case_references(target.patterns, binds, refs)
+    elif isinstance(target, ast.MatchMapping):
+        key_binds, key_refs = find_assignment_lhs_references(target.keys)
+        binds |= key_binds
+        refs |= key_refs
+        find_multiple_match_case_references(target.patterns, binds, refs)
+        if target.rest:
+            binds.add(target.rest)
+    elif isinstance(target, ast.MatchClass):
+        cls_binds, class_refs = find_all_references(target.cls)
+        binds |= cls_binds
+        refs |= class_refs
+        find_multiple_match_case_references(target.patterns, binds, refs)
+        if target.kwd_patterns:
+            find_multiple_match_case_references(target.kwd_patterns, binds, refs)
+    elif isinstance(target, ast.MatchStar):
+        if target.name:
+            binds.add(target.name)
+    elif isinstance(target, ast.MatchAs):
+        if target.name:
+            binds.add(target.name)
+        if target.pattern:
+            as_binds, as_refs = find_match_case_references(target.pattern)
+            binds |= as_binds
+            refs |= as_refs
+    elif isinstance(target, ast.MatchOr):
+        find_multiple_match_case_references(target.patterns, binds, refs)
+    return binds, refs
+
+
+def find_multiple_match_case_references(
+    patterns: list[ast.pattern], binds: set[str], refs: set[tuple[str, ...]]
+):
+    # We normally don't modify parameters, but the match semantics are
+    # simple enough we can get away with it this time.
+    for pattern in patterns:
+        tmp_binds, tmp_refs = find_match_case_references(pattern)
+        binds |= tmp_binds
+        refs |= tmp_refs

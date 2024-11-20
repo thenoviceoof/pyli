@@ -18,3 +18,19 @@ class ExampleContextManager:
 
     def __exit__(self, type, value, traceback):
         pass
+
+
+class ExampleMatchClass:
+    __match_args__ = ("x", "y")
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+
+# Switch this to a Standard library class?
+EXAMPLE_MATCH_CLASS = ExampleMatchClass(1, 2)
+
+import datetime
+
+EXAMPLE_TIMEDELTA = datetime.timedelta(days=2)

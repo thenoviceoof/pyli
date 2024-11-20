@@ -628,6 +628,160 @@ with contextlib.nullcontext():
             )
             assert stdout.getvalue() == "2.0\n", stdout.getvalue()
 
+    def test_match_subject(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main(
+                """
+match math.sqrt(4):
+  case 2.0:
+    print('hello world')
+            """
+            )
+            assert stdout.getvalue() == "hello world\n", stdout.getvalue()
+
+    def test_match_body(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main(
+                """
+match 1:
+  case 1:
+    math.sqrt(9)
+            """
+            )
+            assert stdout.getvalue() == "3.0\n", stdout.getvalue()
+
+    def test_match_pattern_guard(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main(
+                """
+match 1:
+  case 1 if math.sqrt(4) > 0:
+    print("hello world")
+            """
+            )
+            assert stdout.getvalue() == "hello world\n", stdout.getvalue()
+
+    def test_match_pattern_simple(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main(
+                """
+match 1:
+  case not_a_module:
+    print(not_a_module)
+            """
+            )
+            assert stdout.getvalue() == "1\n", stdout.getvalue()
+
+    def test_match_pattern_attribute(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main(
+                """
+match (50, 1):
+  case (logging.CRITICAL, 1):
+    print("hello world")
+            """
+            )
+            assert stdout.getvalue() == "hello world\n", stdout.getvalue()
+
+    def test_match_pattern_mapping_key(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main(
+                """
+match {50: 2}:
+  case {logging.CRITICAL: 2}:
+    print("hello world")
+            """
+            )
+            assert stdout.getvalue() == "hello world\n", stdout.getvalue()
+
+    def test_match_pattern_mapping_value(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main(
+                """
+match {1: 2}:
+  case {1: not_a_module}:
+    print(not_a_module)
+            """
+            )
+            assert stdout.getvalue() == "2\n", stdout.getvalue()
+
+    def test_match_pattern_mapping_rest(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main(
+                """
+match {1: 2, 3: 4}:
+  case {1: 2, **not_a_module}:
+    print(not_a_module)
+            """
+            )
+            assert stdout.getvalue() == "{3: 4}\n", stdout.getvalue()
+
+    def test_match_pattern_class_name(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main(
+                """
+match tests.util.EXAMPLE_TIMEDELTA:
+  case datetime.timedelta(days=2):
+    print("hello world")
+            """
+            )
+            assert stdout.getvalue() == "hello world\n", stdout.getvalue()
+
+    def test_match_pattern_class_pattern(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main(
+                """
+match tests.util.EXAMPLE_MATCH_CLASS:
+  case tests.util.ExampleMatchClass(1, not_a_module):
+    print(not_a_module)
+            """
+            )
+            assert stdout.getvalue() == "2\n", stdout.getvalue()
+
+    def test_match_pattern_class_kwd(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main(
+                """
+match tests.util.EXAMPLE_MATCH_CLASS:
+  case tests.util.ExampleMatchClass(x=not_a_module_1, y=2):
+    print(not_a_module_1)
+            """
+            )
+            assert stdout.getvalue() == "1\n", stdout.getvalue()
+
+    def test_match_pattern_star(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main(
+                """
+match [1, 2, 3]:
+  case [1, *not_a_module]:
+    print(not_a_module)
+            """
+            )
+            assert stdout.getvalue() == "[2, 3]\n", stdout.getvalue()
+
+    def test_match_pattern_as(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main(
+                """
+match [1]:
+  case [not_a_module_1] as not_a_module_2:
+    print(not_a_module_1, not_a_module_2)
+            """
+            )
+            assert stdout.getvalue() == "1 [1]\n", stdout.getvalue()
+
+    def test_match_pattern_or(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            pyli.main(
+                """
+match [1]:
+  case [not_a_module] | (not_a_module):
+    print(not_a_module)
+            """
+            )
+            assert stdout.getvalue() == "1\n", stdout.getvalue()
+
     def test_assign(self):
         with StdoutManager() as (stdin, stdout, stderr):
             pyli.main("x = math.sqrt(4)")
