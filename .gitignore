@@ -2,4 +2,4 @@
 build/*
 dist/*
 .tox/*
-MANIFEST
+pyli.egg-info/*
