@@ -403,11 +403,11 @@ class TestAutoImport(unittest.TestCase):
             )
             if sys.version_info < (2, 7):
                 assert re.match(
-                    "<Element hello at \w+>", stdout.getvalue()
+                    "<Element hello at \\w+>", stdout.getvalue()
                 ), stdout.getvalue()
             else:
                 assert re.match(
-                    "<Element 'hello' at 0x\w+>", stdout.getvalue()
+                    "<Element 'hello' at 0x\\w+>", stdout.getvalue()
                 ), stdout.getvalue()
 
     def test_nested_calls(self):
