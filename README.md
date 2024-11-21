@@ -24,6 +24,9 @@ cd pyli
 sudo python setup.py
 ```
 
+Unfortunately, type annotations mean the minimum supported Python
+version is 3.9.
+
 ## Examples
 
 Let's do some warmups:

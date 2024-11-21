@@ -20,6 +20,7 @@
 
 import ast
 import logging
+import sys
 from collections.abc import Sequence
 from pyli.util import var_base_intersection, var_base_difference
 
@@ -275,7 +276,7 @@ def wrap_last_statement_with_print(stmts: list[ast.stmt], pprint: bool) -> None:
             wrap_last_statement_with_print(handler.body, pprint)
     elif isinstance(last_node, ast.With):
         wrap_last_statement_with_print(last_node.body, pprint)
-    elif isinstance(last_node, ast.Match):
+    elif sys.version_info >= (3, 10, 0) and isinstance(last_node, ast.Match):
         for case in last_node.cases:
             assert isinstance(case, ast.match_case)
             wrap_last_statement_with_print(case.body, pprint)

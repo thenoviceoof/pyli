@@ -286,6 +286,7 @@ with open('pyproject.toml') as f:
             )
             assert stdout.getvalue() == "pony times\n", stdout.getvalue()
 
+    @unittest.skipIf(sys.version_info < (3, 10, 0), "match not suppored")
     def test_match(self):
         with StdoutManager() as (stdin, stdout, stderr):
             main(
@@ -628,6 +629,7 @@ with contextlib.nullcontext():
             )
             assert stdout.getvalue() == "2.0\n", stdout.getvalue()
 
+    @unittest.skipIf(sys.version_info < (3, 10, 0), "match not suppored")
     def test_match_subject(self):
         with StdoutManager() as (stdin, stdout, stderr):
             main(
@@ -639,6 +641,7 @@ match math.sqrt(4):
             )
             assert stdout.getvalue() == "hello world\n", stdout.getvalue()
 
+    @unittest.skipIf(sys.version_info < (3, 10, 0), "match not suppored")
     def test_match_body(self):
         with StdoutManager() as (stdin, stdout, stderr):
             main(
@@ -650,6 +653,7 @@ match 1:
             )
             assert stdout.getvalue() == "3.0\n", stdout.getvalue()
 
+    @unittest.skipIf(sys.version_info < (3, 10, 0), "match not suppored")
     def test_match_pattern_guard(self):
         with StdoutManager() as (stdin, stdout, stderr):
             main(
@@ -661,6 +665,7 @@ match 1:
             )
             assert stdout.getvalue() == "hello world\n", stdout.getvalue()
 
+    @unittest.skipIf(sys.version_info < (3, 10, 0), "match not suppored")
     def test_match_pattern_simple(self):
         with StdoutManager() as (stdin, stdout, stderr):
             main(
@@ -672,6 +677,7 @@ match 1:
             )
             assert stdout.getvalue() == "1\n", stdout.getvalue()
 
+    @unittest.skipIf(sys.version_info < (3, 10, 0), "match not suppored")
     def test_match_pattern_attribute(self):
         with StdoutManager() as (stdin, stdout, stderr):
             main(
@@ -683,6 +689,7 @@ match (50, 1):
             )
             assert stdout.getvalue() == "hello world\n", stdout.getvalue()
 
+    @unittest.skipIf(sys.version_info < (3, 10, 0), "match not suppored")
     def test_match_pattern_mapping_key(self):
         with StdoutManager() as (stdin, stdout, stderr):
             main(
@@ -694,6 +701,7 @@ match {50: 2}:
             )
             assert stdout.getvalue() == "hello world\n", stdout.getvalue()
 
+    @unittest.skipIf(sys.version_info < (3, 10, 0), "match not suppored")
     def test_match_pattern_mapping_value(self):
         with StdoutManager() as (stdin, stdout, stderr):
             main(
@@ -705,6 +713,7 @@ match {1: 2}:
             )
             assert stdout.getvalue() == "2\n", stdout.getvalue()
 
+    @unittest.skipIf(sys.version_info < (3, 10, 0), "match not suppored")
     def test_match_pattern_mapping_rest(self):
         with StdoutManager() as (stdin, stdout, stderr):
             main(
@@ -716,6 +725,7 @@ match {1: 2, 3: 4}:
             )
             assert stdout.getvalue() == "{3: 4}\n", stdout.getvalue()
 
+    @unittest.skipIf(sys.version_info < (3, 10, 0), "match not suppored")
     def test_match_pattern_class_name(self):
         with StdoutManager() as (stdin, stdout, stderr):
             main(
@@ -727,6 +737,7 @@ match tests.util.EXAMPLE_TIMEDELTA:
             )
             assert stdout.getvalue() == "hello world\n", stdout.getvalue()
 
+    @unittest.skipIf(sys.version_info < (3, 10, 0), "match not suppored")
     def test_match_pattern_class_pattern(self):
         with StdoutManager() as (stdin, stdout, stderr):
             main(
@@ -738,6 +749,7 @@ match tests.util.EXAMPLE_MATCH_CLASS:
             )
             assert stdout.getvalue() == "2\n", stdout.getvalue()
 
+    @unittest.skipIf(sys.version_info < (3, 10, 0), "match not suppored")
     def test_match_pattern_class_kwd(self):
         with StdoutManager() as (stdin, stdout, stderr):
             main(
@@ -749,6 +761,7 @@ match tests.util.EXAMPLE_MATCH_CLASS:
             )
             assert stdout.getvalue() == "1\n", stdout.getvalue()
 
+    @unittest.skipIf(sys.version_info < (3, 10, 0), "match not suppored")
     def test_match_pattern_star(self):
         with StdoutManager() as (stdin, stdout, stderr):
             main(
@@ -760,7 +773,10 @@ match [1, 2, 3]:
             )
             assert stdout.getvalue() == "[2, 3]\n", stdout.getvalue()
 
+    @unittest.skipIf(sys.version_info < (3, 10, 0), "match not suppored")
     def test_match_pattern_as(self):
+        if sys.version_info < (3, 10, 0):
+            return
         with StdoutManager() as (stdin, stdout, stderr):
             main(
                 """
@@ -771,6 +787,7 @@ match [1]:
             )
             assert stdout.getvalue() == "1 [1]\n", stdout.getvalue()
 
+    @unittest.skipIf(sys.version_info < (3, 10, 0), "match not suppored")
     def test_match_pattern_or(self):
         with StdoutManager() as (stdin, stdout, stderr):
             main(
