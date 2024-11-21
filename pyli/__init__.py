@@ -22,7 +22,7 @@ import logging
 import sys
 from pyli.main import main
 
-__version__ = (2, 0, 0)
+__version__ = (2, 0, 1)
 
 # Any sane person would use argparse; however, we want to accept
 # arbitrary switches, so unfortunately argparse is not an option.
