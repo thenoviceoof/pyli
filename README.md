@@ -4,7 +4,7 @@ Better scripting with python
 
 Haven't you ever missed writing perl one liners? Or maybe you're more
 familiar with python than all the options of `find`, but like the text
-interaction paradigm of the command line? `pyli`` aims to make it
+interaction paradigm of the command line? `pyli` aims to make it
 easier to use python and all its batteries in conjunction with the
 shell.
 
