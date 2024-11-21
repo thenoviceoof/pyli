@@ -60,13 +60,13 @@ def find_free_references(node: ast.AST) -> set[tuple[str, ...]]:
     LOG.info("Looking for variables...")
     # Python keywords are consumed by parsing the ast, so there's no
     # need to worry about those.
-    bound_vars, refs = find_all_references(node)
+    bound_vars, refs = find_references(node)
     LOG.debug("Found bound variables: {}".format(bound_vars))
     LOG.debug("Found references (including builtins): {}".format(refs))
     return var_base_difference(var_base_difference(refs, BUILTIN_NAMES), bound_vars)
 
 
-def find_all_references(node: ast.AST) -> tuple[set[str], set[tuple[str, ...]]]:
+def find_references(node: ast.AST) -> tuple[set[str], set[tuple[str, ...]]]:
     """Recurse through an AST and find all the bound variables and references."""
     # Start by recursing past everything that doesn't deal directly with variables.
     # Nodes are ordered as in
@@ -75,7 +75,7 @@ def find_all_references(node: ast.AST) -> tuple[set[str], set[tuple[str, ...]]]:
     if isinstance(node, ast.Module):
         return find_multiple_node_references(node.body)
     elif isinstance(node, ast.FormattedValue):
-        return find_all_references(node.value)
+        return find_references(node.value)
     elif isinstance(node, ast.JoinedStr):
         return find_multiple_node_references(node.values)
     elif (
@@ -91,9 +91,9 @@ def find_all_references(node: ast.AST) -> tuple[set[str], set[tuple[str, ...]]]:
             [key for key in node.keys if key is not None] + node.values
         )
     elif isinstance(node, ast.Expr):
-        return find_all_references(node.value)
+        return find_references(node.value)
     elif isinstance(node, ast.UnaryOp):
-        return find_all_references(node.operand)
+        return find_references(node.operand)
     elif isinstance(node, ast.BinOp):
         return find_multiple_node_references([node.left, node.right])
     elif isinstance(node, ast.BoolOp):
@@ -106,7 +106,7 @@ def find_all_references(node: ast.AST) -> tuple[set[str], set[tuple[str, ...]]]:
             [node.func] + list(node.args) + [keyword.value for keyword in node.keywords]
         )
     elif isinstance(node, ast.Starred):
-        return find_all_references(node.value)
+        return find_references(node.value)
     elif isinstance(node, ast.IfExp):
         return find_multiple_node_references([node.test, node.body, node.orelse])
     elif isinstance(node, ast.Attribute):
@@ -125,7 +125,7 @@ def find_all_references(node: ast.AST) -> tuple[set[str], set[tuple[str, ...]]]:
         # `attr`; the ast of `a.b(...)` looks like Call(Attribute(...,
         # attr='b'), args=...). It is not possible to do `a.(b+c)`,
         # and `(a+b).b.c` should be automatically handled.
-        return find_all_references(node.value)
+        return find_references(node.value)
     elif isinstance(node, ast.Subscript):
         return find_multiple_node_references([node.value, node.slice])
     elif isinstance(node, ast.Slice):
@@ -162,11 +162,11 @@ def find_all_references(node: ast.AST) -> tuple[set[str], set[tuple[str, ...]]]:
         or isinstance(node, ast.YieldFrom)
     ):
         if node.value:
-            return find_all_references(node.value)
+            return find_references(node.value)
         else:
             return set(), set()
     elif isinstance(node, ast.Await):
-        return find_all_references(node.value)
+        return find_references(node.value)
     # Handle syntax that temporarily binds values.
     elif (
         isinstance(node, ast.ListComp)
@@ -184,7 +184,7 @@ def find_all_references(node: ast.AST) -> tuple[set[str], set[tuple[str, ...]]]:
             # Inline assignments cannot be used in iterables, so we
             # don't have to worry about a more permanent bind
             # overwriting the temporary one.
-            iter_binds, iter_refs = find_all_references(gen.iter)
+            iter_binds, iter_refs = find_references(gen.iter)
             assert len(iter_binds) == 0
             if_binds, if_refs = find_multiple_node_references(gen.ifs)
             bound_vars.update(if_binds)
@@ -194,7 +194,7 @@ def find_all_references(node: ast.AST) -> tuple[set[str], set[tuple[str, ...]]]:
         elt_binds, elt_refs = (
             find_multiple_node_references([node.key, node.value])
             if isinstance(node, ast.DictComp)
-            else find_all_references(node.elt)
+            else find_references(node.elt)
         )
         bound_vars.update(elt_binds)
         refs.update(var_base_difference(elt_refs, local_binds))
@@ -213,7 +213,7 @@ def find_all_references(node: ast.AST) -> tuple[set[str], set[tuple[str, ...]]]:
                 as_binds, as_refs = find_assignment_lhs_references([item.optional_vars])
                 binds.update(as_binds)
                 refs.update(as_refs)
-            ctx_binds, ctx_refs = find_all_references(item.context_expr)
+            ctx_binds, ctx_refs = find_references(item.context_expr)
             binds.update(ctx_binds)
             refs.update(ctx_refs)
         return binds, refs
@@ -247,7 +247,7 @@ def find_all_references(node: ast.AST) -> tuple[set[str], set[tuple[str, ...]]]:
         # them deal with the runtime consequences of whatever they're
         # up to.
         if hasattr(node, "value") and node.value:
-            rhs_bound_vars, rhs_refs = find_all_references(node.value)
+            rhs_bound_vars, rhs_refs = find_references(node.value)
             return bound_vars | rhs_bound_vars, lhs_refs | rhs_refs
         else:
             return bound_vars, lhs_refs
@@ -257,7 +257,7 @@ def find_all_references(node: ast.AST) -> tuple[set[str], set[tuple[str, ...]]]:
         # (as of 3.11.2), but treat it as a general assignment LHS,
         # just in case.
         lhs_bound_vars, lhs_refs = find_assignment_lhs_references([node.target])
-        rhs_bound_vars, rhs_refs = find_all_references(node.value)
+        rhs_bound_vars, rhs_refs = find_references(node.value)
         return lhs_bound_vars | rhs_bound_vars, lhs_refs | rhs_refs
     elif isinstance(node, ast.Name):
         # If we see a Name, and it isn't otherwise bound, it must be free.
@@ -306,7 +306,7 @@ def find_all_references(node: ast.AST) -> tuple[set[str], set[tuple[str, ...]]]:
     elif isinstance(node, ast.arg):
         return {node.arg}, set()
     elif isinstance(node, ast.keyword):
-        binds, refs = find_all_references(node.value)
+        binds, refs = find_references(node.value)
         return binds | ({node.arg} if node.arg else set()), refs
     elif isinstance(node, ast.ClassDef):
         # Keywords are not actually used anywhere (not real bindings), but the values can have refs.
@@ -339,7 +339,7 @@ def find_multiple_node_references(
     bound_vars = set()
     refs = set()
     for node in nodes:
-        node_bound_vars, node_refs = find_all_references(node)
+        node_bound_vars, node_refs = find_references(node)
         bound_vars.update(node_bound_vars)
         refs.update(node_refs)
     return bound_vars, refs
@@ -363,7 +363,7 @@ def find_assignment_lhs_references(
         else:
             # Anything that is not a plain name is actually a reference.
             # Think `module.flag = 1`.
-            tmp_bound_vars, tmp_refs = find_all_references(t)
+            tmp_bound_vars, tmp_refs = find_references(t)
             # Defend against := showing up in the LHS.
             assert len(tmp_bound_vars) == 0
             lhs_refs.update(tmp_refs)
@@ -397,7 +397,7 @@ if sys.version_info >= (3, 10, 0):
             if target.rest:
                 binds.add(target.rest)
         elif isinstance(target, ast.MatchClass):
-            cls_binds, class_refs = find_all_references(target.cls)
+            cls_binds, class_refs = find_references(target.cls)
             binds |= cls_binds
             refs |= class_refs
             find_multiple_match_case_references(target.patterns, binds, refs)

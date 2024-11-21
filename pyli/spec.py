@@ -333,8 +333,8 @@ def {fn}():
 def set_assignment_target_context(
     target: ast.expr, context: ast.expr_context
 ) -> ast.expr:
-    """
-    Iterate through an assignment target and switch
+    """Iterate through an assignment target and switch between
+    load/store context.
     """
     # Thankfully, there is a limited number of ast nodes involved in assignment.
     if isinstance(target, ast.Attribute):

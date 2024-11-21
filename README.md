@@ -10,18 +10,17 @@ shell.
 
 ## Install
 
-`pyli` is available via `pip`:
+`pyli` is available from `pypi` via `pip`:
 
 ```
 pip install pyli
 ```
 
-Or directly via `git` and `setup.py`:
+You can also download the source directly:
 
 ```
 git clone https://github.com/thenoviceoof/pyli.git
-cd pyli
-sudo python setup.py
+pip install pyli/
 ```
 
 Unfortunately, type annotations mean the minimum supported Python
