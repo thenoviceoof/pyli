@@ -363,6 +363,8 @@ def set_assignment_target_context(
             [set_assignment_target_context(elt, context) for elt in target.elts],
             context,
         )
+    elif isinstance(target, ast.Constant):
+        return target
     else:
         raise ValueError(
             "Unexpected node type found in assignment context: {}".format(target)
