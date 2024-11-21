@@ -25,3 +25,10 @@ pyli = "pyli:script_entry_point"
 [project.urls]
 Repository = "https://github.com/thenoviceoof/pyli"
 Issues = "https://github.com/thenoviceoof/pyli/issues"
+
+[dependency-groups]
+dev = [
+    "black; python_version>='3.7'",
+    "mypy>=0.720",
+    "tox>=3.28.0",
+]

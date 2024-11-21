@@ -3,3 +3,4 @@ build/*
 dist/*
 .tox/*
 pyli.egg-info/*
+.venv
