@@ -1,8 +1,16 @@
 # Development notes
 
+## Setting up the environment
+
+If you are using `uv`:
+
+```
+uv sync
+```
+
 ## Run tests
 
-```tox```
+```uv run tox```
 
 This will run:
 

@@ -376,6 +376,11 @@ import math
             main("x, y = [1, 2]")
             assert stdout.getvalue() == "(1, 2)\n", stdout.getvalue()
 
+    def test_assign_constant_attribute(self):
+        with StdoutManager() as (stdin, stdout, stderr):
+            main("x = {}; x['constant'] = 1")
+            assert stdout.getvalue() == "1\n", stdout.getvalue()
+
 
 class TestAutoImport(unittest.TestCase):
     def tearDown(self):
